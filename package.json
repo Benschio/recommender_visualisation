@@ -1,0 +1,50 @@
+{
+  "name": "recommender_visualisation",
+  "version": "1.0.0",
+  "description": "A website for visualizing decision making processes for recommender systems",
+  "main": "index.js",
+  "scripts": {
+    "build": "gulp build",
+    "clean": "gulp clean",
+    "test": "gulp mocha",
+    "watch": "gulp watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Benschio/recommender_visualisation.git"
+  },
+  "keywords": [
+    "Graphs",
+    "Visualization",
+    "Recommender",
+    "Systems"
+  ],
+  "author": "Benedikt Gansinger",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/Benschio/recommender_visualisation/issues"
+  },
+  "homepage": "https://github.com/Benschio/recommender_visualisation#readme",
+  "devDependencies": {
+    "babel-core": "^6.18.2",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-clean": "^0.3.2",
+    "gulp-istanbul": "^1.1.1",
+    "gulp-mocha": "^3.0.1",
+    "gulp-react": "^3.1.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-uglify": "^2.0.0",
+    "merge2": "^1.0.2",
+    "webpack": "^1.13.3",
+    "webpack-stream": "^3.2.0"
+  },
+  "dependencies": {
+    "chai": "^3.5.0",
+    "graphinius": "^0.4.2",
+    "mocha": "^3.1.2",
+    "react": "^15.3.2",
+    "react-dom": "^15.3.2",
+    "webpack": "^1.13.3"
+  }
+}
