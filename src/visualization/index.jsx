@@ -2,10 +2,11 @@ import React from 'react';
 import { render } from 'react-dom';
 import ControlUI from './controlUI.jsx';
 
-class App extends React.Component {
-
-	constructor(props) {
+class GraphThumbnails extends React.Component {
+	filePath;
+	constructor(props, fp) {
 		super();
+		filePath = fp;
 	}
 
   render () {
@@ -18,4 +19,4 @@ class App extends React.Component {
   }
 }
 
-render(<App/>, document.querySelector('#app-main'));
+export default App;

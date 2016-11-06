@@ -41,6 +41,11 @@ gulp.task('uglify', ['build'], function() {
 		.pipe(gulp.dest('public/'));
 });
 
+gulp.task('test', ['build'], function () { //TODO: actually write some tests
+	return gulp.src(paths.tests, {read: false})
+						 .pipe(mocha({reporter: 'nyan',
+						 							timeout: 60000}));
+});
 
 //----------------------------
 // BROWSER SYNC
