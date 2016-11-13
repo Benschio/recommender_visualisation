@@ -2,11 +2,11 @@ const gulp 						= require('gulp');
 const clean 					= require('gulp-clean');
 const mocha 					= require('gulp-mocha');
 const uglify 					= require('gulp-uglify');
-const istanbul 				= require('gulp-istanbul');
+const istanbul 					= require('gulp-istanbul');
 const webpack					= require('webpack-stream');
 const rename 					= require("gulp-rename");
 const concat 					= require('gulp-concat');
-const browserSync 		= require('browser-sync').create();
+const browserSync 				= require('browser-sync').create();
 
 
 //----------------------------

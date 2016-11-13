@@ -33,7 +33,13 @@ var config = {
     "react": "React",
     "react-dom": "ReactDOM"
   },
-  devtool: "source-map"
+  devtool: "source-map",
+  node: {
+    console: true,
+    fs: 'empty',
+    net: 'empty',
+    tls: 'empty'
+  }
 };
 
 module.exports = config;
