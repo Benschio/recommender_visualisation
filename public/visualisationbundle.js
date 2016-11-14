@@ -66,10 +66,11 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var csvinput = new _graphinius2.default.input.CSVInput(" ", false, true);
+	var csvinput = new _graphinius2.default.input.CSVInput(" ", false, false);
 	
 	csvinput.readFromEdgeListURL("/data/facebook/0.edges", function (g) {
 	    window.graph = g;
+	    var e = g.getUndEdges();
 	
 	    /*var x = 0;
 	    var debug = g.getNodes();
@@ -10244,15 +10245,45 @@
 		}, {
 			key: 'render',
 			value: function render() {
-				return _react2.default.createElement('rect', { className: 'node', width: '10', height: '10', x: this.props.x, y: this.props.y });
+				return _react2.default.createElement('rect', { className: 'Node', width: 10, height: 10, x: this.props.node.getFeature("pos").x, y: this.props.node.getFeature("pos").y });
 			}
 		}]);
 	
 		return UINode;
 	}(_react2.default.Component);
 	
-	var UIGraph = function (_React$Component2) {
-		_inherits(UIGraph, _React$Component2);
+	var UIEdge = function (_React$Component2) {
+		_inherits(UIEdge, _React$Component2);
+	
+		function UIEdge() {
+			_classCallCheck(this, UIEdge);
+	
+			return _possibleConstructorReturn(this, (UIEdge.__proto__ || Object.getPrototypeOf(UIEdge)).apply(this, arguments));
+		}
+	
+		_createClass(UIEdge, [{
+			key: 'changePosition',
+			value: function changePosition(pos) {
+				this.setState({ position: pos });
+			}
+		}, {
+			key: 'render',
+			value: function render() {
+				/*<path d="M 100 350 q 150 -300 300 0" stroke="blue"
+	   stroke-width="5" fill="none" />*/
+				return _react2.default.createElement('path', { id: this.props.pos.name, className: 'Edge',
+					d: "M " + this.props.pos.x1 + " " + this.props.pos.y1 + " L " + this.props.pos.x2 + " " + this.props.pos.y2,
+					stroke: 'blue',
+					strokeWidth: '1',
+					fill: 'none' });
+			}
+		}]);
+	
+		return UIEdge;
+	}(_react2.default.Component);
+	
+	var UIGraph = function (_React$Component3) {
+		_inherits(UIGraph, _React$Component3);
 	
 		function UIGraph() {
 			_classCallCheck(this, UIGraph);
@@ -10263,15 +10294,34 @@
 		_createClass(UIGraph, [{
 			key: 'render',
 			value: function render() {
-				var _this3 = this;
+				var _this4 = this;
 	
 				return _react2.default.createElement(
 					'svg',
-					{ width: '1000', height: '800', key: '1' },
+					{ width: '10000', height: '1000', key: '1' },
+					//Add positions to Nodes, but don't render them yet
 					Object.keys(this.props.graph.getNodes()).map(function (dat) {
 						var x = Math.floor(Math.random() * 1000 + 1);
 						var y = Math.floor(Math.random() * 800 + 1);
-						return _react2.default.createElement(UINode, { key: dat, node: _this3.props.graph.getNodes()[dat], x: x, y: y });
+						_this4.props.graph.getNodes()[dat].setFeature("pos", { x: x, y: y });
+						//return <UINode key={dat} node={this.props.graph.getNodes()[dat]}/>;
+					}),
+					//Render edges (this is done first to show Nodes above edges, otherwise you can't see the nodes)
+					Object.keys(this.props.graph.getUndEdges()).map(function (dat) {
+						var edge = _this4.props.graph.getUndEdges()[dat];
+						var edgeNodes = edge.getNodes();
+						var pos = {};
+						var test = edgeNodes.a;
+						pos.name = dat;
+						pos.x1 = edgeNodes.a.getFeature("pos").x;
+						pos.y1 = edgeNodes.a.getFeature("pos").y;
+						pos.x2 = edgeNodes.b.getFeature("pos").x;
+						pos.y2 = edgeNodes.b.getFeature("pos").y;
+						return _react2.default.createElement(UIEdge, { key: dat, pos: pos });
+					}),
+					//Render Nodes
+					Object.keys(this.props.graph.getNodes()).map(function (dat) {
+						return _react2.default.createElement(UINode, { key: dat, node: _this4.props.graph.getNodes()[dat] });
 					})
 				);
 			}
@@ -10281,22 +10331,6 @@
 	}(_react2.default.Component);
 	
 	exports.default = UIGraph;
-	/*
-	
-	const GraphThumbnail = props => (
-		<svg width=UIConfig.width height=UIConfig.height key="1" >
-			<rect width="100" height="100" stroke="green" strokeWidth="4" fill="yellow"/>
-		</svg>
-	);
-
-	const renderGraphThumbnails = graphs => (
-		<div>
-			{graphs.map(graph => GraphThumbnail(graph))}
-		</div>
-	)
-
-	export default renderGraphThumbnails;
-	*/
 
 /***/ },
 /* 61 */

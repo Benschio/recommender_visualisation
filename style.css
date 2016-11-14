@@ -5,10 +5,15 @@ rect.btn {
     stroke-opacity:0;
 }
 
-rect.node {
+rect.Node {
     /*width:10px;
     height:10px;*/
     stroke:green;
     stroke-width:2px;
     fill:yellow;
+}
+Path.Edge {
+    /*stroke:blue;
+    stroke-width:5;
+    fill:none;*/
 }

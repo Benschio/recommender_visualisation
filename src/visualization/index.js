@@ -5,10 +5,11 @@ import G from 'graphinius';
 import UIConfig from './UIConfig.js';
 
 
-var csvinput = new G.input.CSVInput(" ", false, true);
+var csvinput = new G.input.CSVInput(" ", false, false);
 
 csvinput.readFromEdgeListURL("/data/facebook/0.edges", function(g){
     window.graph = g;
+    var e = g.getUndEdges();
 
     /*var x = 0;
     var debug = g.getNodes();
@@ -27,5 +28,5 @@ csvinput.readFromEdgeListURL("/data/facebook/0.edges", function(g){
     var uigraph = React.createElement(UIGraph, {graph: g});
     //uigraph.setGraph(g);
     render(uigraph, document.querySelector('#app-main'));
-})
+});
 
