@@ -69,19 +69,19 @@
 	var eles = (0, _index2.default)(_availablegraphs2.default);
 	(0, _reactDom.render)(eles, document.querySelector('#app-main'));
 	
-	//var graphini =
-	var csvinput = new _graphinius2.default.input.CSVInput(" ", false, true); //G.input.CsvInput(" ", false, true);
-	//csvinput._separator = ' ';
-	//csvinput._direction_mode = true;
+	var csvinput = new _graphinius2.default.input.CSVInput(" ", false, true);
 	
-	window.graph = csvinput.readFromEdgeListURL("/data/facebook/0.edges", function () {
+	csvinput.readFromEdgeListURL("/data/facebook/0.edges", function (g) {
 	    //TODO: Check whether this was successful or not
-	    //alert("Some callback");
+	
 	    var x = 0;
-	    /*for(node of arguments[0]._nodes){
+	
+	    Object.keys(g.getNodes()).forEach(function (key) {
 	        x++;
-	    }*/
-	    alert("Number of nodes: " + x + " and " + arguments[0]._nr_nodes);
+	    });
+	
+	    //alert("Number of nodes: " + x + " and " + g.nrNodes());
+	    window.graph = g;
 	});
 
 /***/ },

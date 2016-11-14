@@ -52,36 +52,42 @@
 	
 	var _reactDom = __webpack_require__(2);
 	
-	var _index = __webpack_require__(3);
+	var _index = __webpack_require__(60);
 	
 	var _index2 = _interopRequireDefault(_index);
-	
-	var _availablegraphs = __webpack_require__(5);
-	
-	var _availablegraphs2 = _interopRequireDefault(_availablegraphs);
 	
 	var _graphinius = __webpack_require__(6);
 	
 	var _graphinius2 = _interopRequireDefault(_graphinius);
 	
+	var _UIConfig = __webpack_require__(62);
+	
+	var _UIConfig2 = _interopRequireDefault(_UIConfig);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var eles = (0, _index2.default)(_availablegraphs2.default);
-	(0, _reactDom.render)(eles, document.querySelector('#app-main'));
+	var csvinput = new _graphinius2.default.input.CSVInput(" ", false, true);
 	
-	//var graphini =
-	var csvinput = new _graphinius2.default.input.CSVInput(" ", false, true); //G.input.CsvInput(" ", false, true);
-	//csvinput._separator = ' ';
-	//csvinput._direction_mode = true;
+	csvinput.readFromEdgeListURL("/data/facebook/0.edges", function (g) {
+	    window.graph = g;
 	
-	window.graph = csvinput.readFromEdgeListURL("/data/facebook/0.edges", function () {
-	    //TODO: Check whether this was successful or not
-	    //alert("Some callback");
-	    var x = 0;
-	    /*for(node of arguments[0]._nodes){
+	    /*var x = 0;
+	    var debug = g.getNodes();
+	    var keys = Object.keys(debug);
+	    x = keys.map(Node => {
 	        x++;
-	    }*/
-	    alert("Number of nodes: " + x + " and " + arguments[0]._nr_nodes);
+	        return x;
+	    })
+	    var unodes = Object.keys(g.getNodes()).map(function(key){
+	        return <UINode/>; //this.props.graph.get(key)
+	    })*/
+	    //render(unodes, document.querySelector('#app-main'));
+	    //for(node in nodes){console.log(nodes[node].getID()}
+	    //object.keys(nodes).map(function(el){return nodes[el].getID()})
+	    //var eles = renderGraphThumbnail(g);
+	    var uigraph = _react2.default.createElement(_index2.default, { graph: g });
+	    //uigraph.setGraph(g);
+	    (0, _reactDom.render)(uigraph, document.querySelector('#app-main'));
 	});
 
 /***/ },
@@ -97,154 +103,9 @@
 	module.exports = ReactDOM;
 
 /***/ },
-/* 3 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-		value: true
-	});
-	
-	var _react = __webpack_require__(1);
-	
-	var _react2 = _interopRequireDefault(_react);
-	
-	var _reactDom = __webpack_require__(2);
-	
-	var _controlUI = __webpack_require__(4);
-	
-	var _controlUI2 = _interopRequireDefault(_controlUI);
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var GraphThumbnail = function GraphThumbnail(props) {
-		return _react2.default.createElement(
-			'svg',
-			{ width: props.width, height: props.height, key: props.id },
-			_react2.default.createElement('rect', { width: props.width, height: '100', stroke: 'green', strokeWidth: '4', fill: 'yellow' })
-		);
-	};
-	
-	var renderGraphThumbnails = function renderGraphThumbnails(graphs) {
-		return _react2.default.createElement(
-			'div',
-			null,
-			graphs.map(function (graph) {
-				return GraphThumbnail(graph);
-			})
-		);
-	};
-	
-	exports.default = renderGraphThumbnails;
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-	
-	var _react = __webpack_require__(1);
-	
-	var _react2 = _interopRequireDefault(_react);
-	
-	var _reactDom = __webpack_require__(2);
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-	
-	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-	
-	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-	
-	var ControlUI = function (_React$Component) {
-	  _inherits(ControlUI, _React$Component);
-	
-	  function ControlUI(props) {
-	    _classCallCheck(this, ControlUI);
-	
-	    return _possibleConstructorReturn(this, (ControlUI.__proto__ || Object.getPrototypeOf(ControlUI)).call(this));
-	  }
-	
-	  _createClass(ControlUI, [{
-	    key: 'render',
-	    value: function render() {
-	      return _react2.default.createElement(
-	        'div',
-	        { id: 'control-ui' },
-	        _react2.default.createElement(
-	          'h3',
-	          null,
-	          'Welcome to graph based Recommendations!'
-	        ),
-	        _react2.default.createElement(
-	          'button',
-	          null,
-	          'Blahoo'
-	        )
-	      );
-	    }
-	  }]);
-	
-	  return ControlUI;
-	}(_react2.default.Component);
-	
-	exports.default = ControlUI;
-
-/***/ },
-/* 5 */
-/***/ function(module, exports) {
-
-	"use strict";
-	
-	Object.defineProperty(exports, "__esModule", {
-		value: true
-	});
-	var graphs = [{
-		width: "100",
-		height: "100",
-		id: "u0"
-		/*type:	"circle",
-	 "1": 	'cx="50"',
-	 "2": 	'cy="50"',
-	 "3": 	'r="40"',
-	 "4": 	'stroke="blue"',
-	 "5": 	'stroke-width="4"',
-	 "6": 	'fill="brown"'*/
-	}, {
-		width: "101",
-		height: "100",
-		type: "circle",
-		id: "u1"
-		/*"1": 	'cx="50"',
-	 "2": 	'cy="50"',
-	 "3": 	'r="40"',
-	 "4": 	'stroke="blue"',
-	 "5": 	'stroke-width="4"',
-	 "6": 	'fill="brown"'*/
-	}, {
-		width: "102",
-		height: "100",
-		type: "circle",
-		id: "u2" /*
-	          "1": 	'cx="50"',
-	          "2": 	'cy="50"',
-	          "3": 	'r="40"',
-	          "4": 	'stroke="blue"',
-	          "5": 	'stroke-width="4"',
-	          "6": 	'fill="brown"'*/
-	}];
-	
-	exports.default = graphs;
-
-/***/ },
+/* 3 */,
+/* 4 */,
+/* 5 */,
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -10335,6 +10196,166 @@
 	exports.BinaryHeap = BinaryHeap;
 	
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(18)))
+
+/***/ },
+/* 60 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
+	var _react = __webpack_require__(1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _reactDom = __webpack_require__(2);
+	
+	var _controlUI = __webpack_require__(61);
+	
+	var _controlUI2 = _interopRequireDefault(_controlUI);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
+	var UINode = function (_React$Component) {
+		_inherits(UINode, _React$Component);
+	
+		function UINode() {
+			_classCallCheck(this, UINode);
+	
+			return _possibleConstructorReturn(this, (UINode.__proto__ || Object.getPrototypeOf(UINode)).apply(this, arguments));
+		}
+	
+		_createClass(UINode, [{
+			key: 'changePosition',
+			value: function changePosition(pos) {
+				this.setState({ position: pos });
+			}
+		}, {
+			key: 'render',
+			value: function render() {
+				return _react2.default.createElement('rect', { className: 'node', width: '10', height: '10', x: this.props.x, y: this.props.y });
+			}
+		}]);
+	
+		return UINode;
+	}(_react2.default.Component);
+	
+	var UIGraph = function (_React$Component2) {
+		_inherits(UIGraph, _React$Component2);
+	
+		function UIGraph() {
+			_classCallCheck(this, UIGraph);
+	
+			return _possibleConstructorReturn(this, (UIGraph.__proto__ || Object.getPrototypeOf(UIGraph)).apply(this, arguments));
+		}
+	
+		_createClass(UIGraph, [{
+			key: 'render',
+			value: function render() {
+				var _this3 = this;
+	
+				return _react2.default.createElement(
+					'svg',
+					{ width: '1000', height: '800', key: '1' },
+					Object.keys(this.props.graph.getNodes()).map(function (dat) {
+						var x = Math.floor(Math.random() * 1000 + 1);
+						var y = Math.floor(Math.random() * 800 + 1);
+						return _react2.default.createElement(UINode, { key: dat, node: _this3.props.graph.getNodes()[dat], x: x, y: y });
+					})
+				);
+			}
+		}]);
+	
+		return UIGraph;
+	}(_react2.default.Component);
+	
+	exports.default = UIGraph;
+	/*
+	
+	const GraphThumbnail = props => (
+		<svg width=UIConfig.width height=UIConfig.height key="1" >
+			<rect width="100" height="100" stroke="green" strokeWidth="4" fill="yellow"/>
+		</svg>
+	);
+
+	const renderGraphThumbnails = graphs => (
+		<div>
+			{graphs.map(graph => GraphThumbnail(graph))}
+		</div>
+	)
+
+	export default renderGraphThumbnails;
+	*/
+
+/***/ },
+/* 61 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	
+	var _react = __webpack_require__(1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _reactDom = __webpack_require__(2);
+	
+	var _controlUI = __webpack_require__(61);
+	
+	var _controlUI2 = _interopRequireDefault(_controlUI);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var GraphThumbnail = function GraphThumbnail(props) {
+	    return _react2.default.createElement(
+	        'svg',
+	        { width: props.width, height: props.height, key: props.id },
+	        _react2.default.createElement('rect', { width: props.width, height: '100', stroke: 'green', strokeWidth: '4', fill: 'yellow' })
+	    );
+	};
+	
+	var renderGraphThumbnails = function renderGraphThumbnails(graphs) {
+	    return _react2.default.createElement(
+	        'div',
+	        null,
+	        graphs.map(function (graph) {
+	            return GraphThumbnail(graph);
+	        })
+	    );
+	};
+	
+	exports.default = renderGraphThumbnails;
+
+/***/ },
+/* 62 */
+/***/ function(module, exports) {
+
+	"use strict";
+	
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+	var UIConfig = {
+		width: "100",
+		height: "100",
+		type: "circle"
+	};
+	
+	exports.default = UIConfig;
 
 /***/ }
 /******/ ]);

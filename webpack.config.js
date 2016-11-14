@@ -8,7 +8,7 @@ var APP_DIR = path.resolve(__dirname, 'src');
 var config = {
   entry: {
 	  index: APP_DIR + '/index/index.js',
-	  visualisation: APP_DIR + '/index/index.js',
+	  visualisation: APP_DIR + '/visualization/index.js',
 	  },
   output: {
     path: BUILD_DIR,

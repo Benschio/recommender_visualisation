@@ -1,0 +1,14 @@
+rect.btn {
+    stroke:#fff;
+    fill:#fff;
+    fill-opacity:0;
+    stroke-opacity:0;
+}
+
+rect.node {
+    /*width:10px;
+    height:10px;*/
+    stroke:green;
+    stroke-width:2px;
+    fill:yellow;
+}

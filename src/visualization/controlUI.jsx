@@ -1,21 +1,17 @@
 import React from 'react';
 import { render } from 'react-dom';
+import ControlUI from './controlUI.jsx';
 
+const GraphThumbnail = props => (
+    <svg width={props.width} height={props.height} key={props.id}>
+        <rect width={props.width} height="100" stroke="green" strokeWidth="4" fill="yellow"/>
+    </svg>
+);
 
-class ControlUI extends React.Component {
+const renderGraphThumbnails = graphs => (
+    <div>
+        {graphs.map(graph => GraphThumbnail(graph))}
+    </div>
+)
 
-	constructor(props) {
-		super();
-	}
-
-  render () {
-    return (
-      <div id="control-ui">
-    	  <h3>Welcome to graph based Recommendations!</h3>
-        <button>Blahoo</button>
-      </div>
-		);
-  }
-}
-
-export default ControlUI;
+export default renderGraphThumbnails;
