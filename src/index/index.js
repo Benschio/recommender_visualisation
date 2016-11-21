@@ -3,6 +3,9 @@ import { render } from 'react-dom';
 import renderGraphThumbnail from './index.jsx';
 import graphs from './availablegraphs.js';
 import G from 'graphinius';
+import BH from '../visualization/barneshut/algorithm.js';
+
+BH.applyForces();
 
 var eles = renderGraphThumbnail(graphs);
 render(eles, document.querySelector('#app-main'));
@@ -16,9 +19,8 @@ csvinput.readFromEdgeListURL("/data/facebook/0.edges", function(g){
 
     Object.keys(g.getNodes()).forEach(function(key){
         x++;
-    })
-
+    });
     //alert("Number of nodes: " + x + " and " + g.nrNodes());
     window.graph = g;
-})
+});
 

@@ -4,6 +4,7 @@ const mocha 					= require('gulp-mocha');
 const uglify 					= require('gulp-uglify');
 const istanbul 					= require('gulp-istanbul');
 const webpack					= require('webpack-stream');
+const ts 							= require('gulp-typescript');
 const rename 					= require("gulp-rename");
 const concat 					= require('gulp-concat');
 const browserSync 				= require('browser-sync').create();
@@ -17,8 +18,20 @@ const paths = {
 	tests: ['test/**/*.js'],
 	clean: ['public/*', 'coverage'],
 	public: ['index.html', 'public/bundle.js'],
+	typescripts: ['src/visualization/barneshut/*.ts'],
 	styles: ['src/styles/**/*.styl']
 };
+
+//----------------------------
+// CONFIG
+//----------------------------
+var tsProject = ts.createProject({
+	target: "ES5",
+	module: "commonjs",
+	declaration: false,
+	noResolve: false,
+	removeComments: true
+});
 
 
 gulp.task('clean', function() {
@@ -26,8 +39,14 @@ gulp.task('clean', function() {
 		.pipe(clean())
 });
 
+gulp.task('typescript', ['clean'], function(){
+	return gulp.src(paths.typescripts, {base: "."})
+		.pipe(tsProject())
+		.pipe(gulp.dest('.'));
+});
 
-gulp.task('build', ['clean'], function() {
+gulp.task('build', ['typescript'], function() {
+
 	return gulp.src('') // specified in webpack config
 		.pipe(webpack( require('./webpack.config.js' )))
 		.pipe(gulp.dest('public/'));

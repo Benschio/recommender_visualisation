@@ -27,7 +27,8 @@ class UIEdge extends React.Component {
 					 " L " + this.props.pos.x2 + " " + this.props.pos.y2}
 					 stroke="blue"
 					 strokeWidth="1"
-					 fill="none" />
+					 fill="none"
+					 opacity="0.2"/>
 	}
 }
 

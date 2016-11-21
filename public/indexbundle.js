@@ -64,7 +64,13 @@
 	
 	var _graphinius2 = _interopRequireDefault(_graphinius);
 	
+	var _algorithm = __webpack_require__(64);
+	
+	var _algorithm2 = _interopRequireDefault(_algorithm);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	_algorithm2.default.applyForces();
 	
 	var eles = (0, _index2.default)(_availablegraphs2.default);
 	(0, _reactDom.render)(eles, document.querySelector('#app-main'));
@@ -79,7 +85,6 @@
 	    Object.keys(g.getNodes()).forEach(function (key) {
 	        x++;
 	    });
-	
 	    //alert("Number of nodes: " + x + " and " + g.nrNodes());
 	    window.graph = g;
 	});
@@ -251,16 +256,18 @@
 	/* WEBPACK VAR INJECTION */(function(global) {var Edges			      = __webpack_require__(7);
 	var Nodes 		      = __webpack_require__(8);
 	var Graph 		      = __webpack_require__(10);
-	var CSVInput 	      = __webpack_require__(11);
-	var JSONInput       = __webpack_require__(53);
-	var CSVOutput       = __webpack_require__(54);
-	var BFS				      = __webpack_require__(55);
-	var DFS				      = __webpack_require__(57);
-	var PFS             = __webpack_require__(58);
+	var CSVInput 	      = __webpack_require__(20);
+	var JSONInput       = __webpack_require__(55);
+	var CSVOutput       = __webpack_require__(56);
+	var BFS				      = __webpack_require__(57);
+	var DFS				      = __webpack_require__(59);
+	var PFS             = __webpack_require__(60);
 	var structUtils     = __webpack_require__(9);
-	var remoteUtils     = __webpack_require__(15);
-	var callbackUtils   = __webpack_require__(56);
-	var binaryHeap      = __webpack_require__(59);
+	var remoteUtils     = __webpack_require__(23);
+	var callbackUtils   = __webpack_require__(58);
+	var randGen         = __webpack_require__(62);
+	var binaryHeap      = __webpack_require__(61);
+	var simplePerturbation = __webpack_require__(63);
 	
 	// TODO:
 	// Encapsulate ALL functions within Graph for
@@ -269,7 +276,7 @@
 	var out = typeof window !== 'undefined' ? window : global;
 	
 	/**
-	 * For Browser window object
+	 * Inside Global or Window object
 	 */
 	out.$G = {
 		core: {
@@ -298,11 +305,15 @@
 	  util: {
 	    struct          : structUtils,
 	    remote          : remoteUtils,
-	    callback        : callbackUtils
+	    callback        : callbackUtils,
+	    randgen         : randGen
 	  },
 	  datastructs: {
 	    binaryHeap  : binaryHeap
-	  }
+	  },
+		perturbation: {
+			simplePerturbation: simplePerturbation
+		}
 	};
 	
 	/**
@@ -667,6 +678,8 @@
 	var $N = __webpack_require__(8);
 	var $E = __webpack_require__(7);
 	var $DS = __webpack_require__(9);
+	var logger_1 = __webpack_require__(11);
+	var logger = new logger_1.Logger();
 	(function (GraphMode) {
 	    GraphMode[GraphMode["INIT"] = 0] = "INIT";
 	    GraphMode[GraphMode["DIRECTED"] = 1] = "DIRECTED";
@@ -933,48 +946,6 @@
 	        this.clearAllDirEdges();
 	        this.clearAllUndEdges();
 	    };
-	    BaseGraph.prototype.createRandomEdgesProb = function (probability, directed) {
-	        if (0 > probability || 1 < probability) {
-	            throw new Error("Probability out of range.");
-	        }
-	        directed = directed || false;
-	        var nodes = this._nodes, node_a, node_b, edge_id, dir = directed ? '_d' : '_u';
-	        for (node_a in nodes) {
-	            for (node_b in nodes) {
-	                if (node_a !== node_b && Math.random() < probability) {
-	                    edge_id = nodes[node_a].getID() + "_" + nodes[node_b].getID() + dir;
-	                    this.addEdge(edge_id, nodes[node_a], nodes[node_b], { directed: directed });
-	                }
-	            }
-	        }
-	    };
-	    BaseGraph.prototype.createRandomEdgesSpan = function (min, max, directed) {
-	        if (min < 0) {
-	            throw new Error('Minimum degree cannot be negative.');
-	        }
-	        if (max >= this.nrNodes()) {
-	            throw new Error('Maximum degree exceeds number of reachable nodes.');
-	        }
-	        directed = directed || false;
-	        var min = min | 0, max = max | 0, nodes = this._nodes, idx_a, node_a, node_b, edge_id, node_keys = Object.keys(nodes), keys_len = node_keys.length, rand_idx, rand_deg, dir = directed ? '_d' : '_u';
-	        for (idx_a in nodes) {
-	            node_a = nodes[idx_a];
-	            rand_idx = 0;
-	            rand_deg = (Math.random() * max + min) | 0;
-	            while (rand_deg) {
-	                rand_idx = (keys_len * Math.random()) | 0;
-	                node_b = nodes[node_keys[rand_idx]];
-	                if (node_a !== node_b) {
-	                    edge_id = node_a.getID() + "_" + node_b.getID() + dir;
-	                    if (node_a.hasEdgeID(edge_id)) {
-	                        continue;
-	                    }
-	                    this.addEdge(edge_id, node_a, node_b, { directed: directed });
-	                    --rand_deg;
-	                }
-	            }
-	        }
-	    };
 	    BaseGraph.prototype.getRandomDirEdge = function () {
 	        return this.pickRandomProperty(this._dir_edges);
 	    };
@@ -1002,15 +973,30 @@
 	            this._mode = GraphMode.INIT;
 	        }
 	    };
-	    BaseGraph.prototype.pickRandomProperty = function (obj) {
-	        var key;
-	        var count = 0;
-	        for (var prop in obj) {
-	            if (obj.hasOwnProperty(prop) && Math.random() < 1 / ++count) {
-	                key = prop;
+	    BaseGraph.prototype.pickRandomProperty = function (propList) {
+	        var tmpList = Object.keys(propList);
+	        var randomPropertyName = tmpList[Math.floor(Math.random() * tmpList.length)];
+	        return propList[randomPropertyName];
+	    };
+	    BaseGraph.prototype.pickRandomProperties = function (propList, amount) {
+	        var ids = [];
+	        var keys = Object.keys(propList);
+	        var fraction = amount / keys.length;
+	        var used_keys = {};
+	        for (var i = 0; ids.length < amount && i < keys.length; i++) {
+	            if (Math.random() < fraction) {
+	                ids.push(keys[i]);
+	                used_keys[keys[i]] = i;
 	            }
 	        }
-	        return obj[key];
+	        var diff = amount - ids.length;
+	        for (var i = 0; i < keys.length && diff; i++) {
+	            if (used_keys[keys[i]] == null) {
+	                ids.push(keys[i]);
+	                diff--;
+	            }
+	        }
+	        return ids;
 	    };
 	    return BaseGraph;
 	}());
@@ -1021,1043 +1007,63 @@
 /* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
-	"use strict";
-	var path = __webpack_require__(12);
-	var fs = __webpack_require__(14);
-	var $G = __webpack_require__(10);
-	var $R = __webpack_require__(15);
-	var CSVInput = (function () {
-	    function CSVInput(_separator, _explicit_direction, _direction_mode) {
-	        if (_separator === void 0) { _separator = ','; }
-	        if (_explicit_direction === void 0) { _explicit_direction = true; }
-	        if (_direction_mode === void 0) { _direction_mode = false; }
-	        this._separator = _separator;
-	        this._explicit_direction = _explicit_direction;
-	        this._direction_mode = _direction_mode;
+	/* WEBPACK VAR INJECTION */(function(console) {"use strict";
+	var LOG_LEVELS = __webpack_require__(19).LOG_LEVELS;
+	var RUN_CONFIG = __webpack_require__(19).RUN_CONFIG;
+	var Logger = (function () {
+	    function Logger(config) {
+	        this.config = null;
+	        this.config = config || RUN_CONFIG;
 	    }
-	    CSVInput.prototype.readFromAdjacencyListURL = function (fileurl, cb) {
-	        this.readGraphFromURL(fileurl, cb, this.readFromAdjacencyList);
-	    };
-	    CSVInput.prototype.readFromEdgeListURL = function (fileurl, cb) {
-	        this.readGraphFromURL(fileurl, cb, this.readFromEdgeList);
-	    };
-	    CSVInput.prototype.readGraphFromURL = function (fileurl, cb, localFun) {
-	        var self = this, graph_name = path.basename(fileurl), graph, request;
-	        if (typeof window !== 'undefined') {
-	            request = new XMLHttpRequest();
-	            request.onreadystatechange = function () {
-	                if (request.readyState == 4 && request.status == 200) {
-	                    var input = request.responseText.split('\n');
-	                    graph = localFun.apply(self, [input, graph_name]);
-	                    cb(graph, undefined);
-	                }
-	            };
-	            request.open("GET", fileurl, true);
-	            request.setRequestHeader('Content-Type', 'text/csv; charset=ISO-8859-1');
-	            request.send();
+	    Logger.prototype.log = function (msg) {
+	        if (this.config.log_level === LOG_LEVELS.debug) {
+	            console.log.apply(console, Array.prototype.slice.call(arguments));
+	            return true;
 	        }
-	        else {
-	            $R.retrieveRemoteFile(fileurl, function (raw_graph) {
-	                var input = raw_graph.toString().split('\n');
-	                graph = localFun.apply(self, [input, graph_name]);
-	                cb(graph, undefined);
-	            });
+	        return false;
+	    };
+	    Logger.prototype.error = function (err) {
+	        if (this.config.log_level === LOG_LEVELS.debug) {
+	            console.error.apply(console, Array.prototype.slice.call(arguments));
+	            return true;
 	        }
+	        return false;
 	    };
-	    CSVInput.prototype.readFromAdjacencyListFile = function (filepath) {
-	        return this.readFileAndReturn(filepath, this.readFromAdjacencyList);
-	    };
-	    CSVInput.prototype.readFromEdgeListFile = function (filepath) {
-	        return this.readFileAndReturn(filepath, this.readFromEdgeList);
-	    };
-	    CSVInput.prototype.readFileAndReturn = function (filepath, func) {
-	        this.checkNodeEnvironment();
-	        var graph_name = path.basename(filepath);
-	        var input = fs.readFileSync(filepath).toString().split('\n');
-	        return func.apply(this, [input, graph_name]);
-	    };
-	    CSVInput.prototype.readFromAdjacencyList = function (input, graph_name) {
-	        var graph = new $G.BaseGraph(graph_name);
-	        for (var idx in input) {
-	            var line = input[idx], elements = this._separator.match(/\s+/g) ? line.match(/\S+/g) : line.replace(/\s+/g, '').split(this._separator), node_id = elements[0], node, edge_array = elements.slice(1), edge, target_node_id, target_node, dir_char, directed, edge_id, edge_id_u2;
-	            if (!node_id) {
-	                continue;
-	            }
-	            node = graph.hasNodeID(node_id) ? graph.getNodeById(node_id) : graph.addNode(node_id);
-	            for (var e = 0; e < edge_array.length;) {
-	                if (this._explicit_direction && (!edge_array || edge_array.length % 2)) {
-	                    throw new Error('Every edge entry has to contain its direction info in explicit mode.');
-	                }
-	                target_node_id = edge_array[e++];
-	                target_node = graph.hasNodeID(target_node_id) ? graph.getNodeById(target_node_id) : graph.addNode(target_node_id);
-	                dir_char = this._explicit_direction ? edge_array[e++] : this._direction_mode ? 'd' : 'u';
-	                if (dir_char !== 'd' && dir_char !== 'u') {
-	                    throw new Error("Specification of edge direction invalid (d and u are valid).");
-	                }
-	                directed = dir_char === 'd';
-	                edge_id = node_id + "_" + target_node_id + "_" + dir_char;
-	                edge_id_u2 = target_node_id + "_" + node_id + "_" + dir_char;
-	                if (graph.hasEdgeID(edge_id) || (!directed && graph.hasEdgeID(edge_id_u2))) {
-	                    continue;
-	                }
-	                else {
-	                    edge = graph.addEdge(edge_id, node, target_node, { directed: directed });
-	                }
-	            }
+	    Logger.prototype.dir = function (obj) {
+	        if (this.config.log_level === LOG_LEVELS.debug) {
+	            console.dir.apply(console, Array.prototype.slice.call(arguments));
+	            return true;
 	        }
-	        return graph;
+	        return false;
 	    };
-	    CSVInput.prototype.readFromEdgeList = function (input, graph_name) {
-	        var graph = new $G.BaseGraph(graph_name);
-	        for (var idx in input) {
-	            var line = input[idx], elements = this._separator.match(/\s+/g) ? line.match(/\S+/g) : line.replace(/\s+/g, '').split(this._separator);
-	            if (!elements) {
-	                continue;
-	            }
-	            if (elements.length < 2) {
-	                throw new Error('Edge list is in wrong format - every line has to consist of two entries (the 2 nodes)');
-	            }
-	            var node_id = elements[0], node, target_node, edge, target_node_id = elements[1], dir_char = this._explicit_direction ? elements[2] : this._direction_mode ? 'd' : 'u', directed, edge_id, edge_id_u2;
-	            node = graph.hasNodeID(node_id) ? graph.getNodeById(node_id) : graph.addNode(node_id);
-	            target_node = graph.hasNodeID(target_node_id) ? graph.getNodeById(target_node_id) : graph.addNode(target_node_id);
-	            if (dir_char !== 'd' && dir_char !== 'u') {
-	                throw new Error("Specification of edge direction invalid (d and u are valid).");
-	            }
-	            directed = dir_char === 'd';
-	            edge_id = node_id + "_" + target_node_id + "_" + dir_char;
-	            edge_id_u2 = target_node_id + "_" + node_id + "_" + dir_char;
-	            if (graph.hasEdgeID(edge_id) || (!directed && graph.hasEdgeID(edge_id_u2))) {
-	                continue;
-	            }
-	            else {
-	                edge = graph.addEdge(edge_id, node, target_node, { directed: directed });
-	            }
+	    Logger.prototype.info = function (msg) {
+	        if (this.config.log_level === LOG_LEVELS.debug) {
+	            console.info.apply(console, Array.prototype.slice.call(arguments));
+	            return true;
 	        }
-	        return graph;
+	        return false;
 	    };
-	    CSVInput.prototype.checkNodeEnvironment = function () {
-	        if (typeof window !== 'undefined') {
-	            throw new Error('Cannot read file in browser environment.');
+	    Logger.prototype.warn = function (msg) {
+	        if (this.config.log_level === LOG_LEVELS.debug) {
+	            console.warn.apply(console, Array.prototype.slice.call(arguments));
+	            return true;
 	        }
+	        return false;
 	    };
-	    return CSVInput;
+	    return Logger;
 	}());
-	exports.CSVInput = CSVInput;
-
+	exports.Logger = Logger;
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(12)))
 
 /***/ },
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(process) {// Copyright Joyent, Inc. and other Node contributors.
-	//
-	// Permission is hereby granted, free of charge, to any person obtaining a
-	// copy of this software and associated documentation files (the
-	// "Software"), to deal in the Software without restriction, including
-	// without limitation the rights to use, copy, modify, merge, publish,
-	// distribute, sublicense, and/or sell copies of the Software, and to permit
-	// persons to whom the Software is furnished to do so, subject to the
-	// following conditions:
-	//
-	// The above copyright notice and this permission notice shall be included
-	// in all copies or substantial portions of the Software.
-	//
-	// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-	// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-	// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-	// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-	// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-	// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-	// USE OR OTHER DEALINGS IN THE SOFTWARE.
-	
-	// resolves . and .. elements in a path array with directory names there
-	// must be no slashes, empty elements, or device names (c:\) in the array
-	// (so also no leading and trailing slashes - it does not distinguish
-	// relative and absolute paths)
-	function normalizeArray(parts, allowAboveRoot) {
-	  // if the path tries to go above the root, `up` ends up > 0
-	  var up = 0;
-	  for (var i = parts.length - 1; i >= 0; i--) {
-	    var last = parts[i];
-	    if (last === '.') {
-	      parts.splice(i, 1);
-	    } else if (last === '..') {
-	      parts.splice(i, 1);
-	      up++;
-	    } else if (up) {
-	      parts.splice(i, 1);
-	      up--;
-	    }
-	  }
-	
-	  // if the path is allowed to go above the root, restore leading ..s
-	  if (allowAboveRoot) {
-	    for (; up--; up) {
-	      parts.unshift('..');
-	    }
-	  }
-	
-	  return parts;
-	}
-	
-	// Split a filename into [root, dir, basename, ext], unix version
-	// 'root' is just a slash, or nothing.
-	var splitPathRe =
-	    /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
-	var splitPath = function(filename) {
-	  return splitPathRe.exec(filename).slice(1);
-	};
-	
-	// path.resolve([from ...], to)
-	// posix version
-	exports.resolve = function() {
-	  var resolvedPath = '',
-	      resolvedAbsolute = false;
-	
-	  for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
-	    var path = (i >= 0) ? arguments[i] : process.cwd();
-	
-	    // Skip empty and invalid entries
-	    if (typeof path !== 'string') {
-	      throw new TypeError('Arguments to path.resolve must be strings');
-	    } else if (!path) {
-	      continue;
-	    }
-	
-	    resolvedPath = path + '/' + resolvedPath;
-	    resolvedAbsolute = path.charAt(0) === '/';
-	  }
-	
-	  // At this point the path should be resolved to a full absolute path, but
-	  // handle relative paths to be safe (might happen when process.cwd() fails)
-	
-	  // Normalize the path
-	  resolvedPath = normalizeArray(filter(resolvedPath.split('/'), function(p) {
-	    return !!p;
-	  }), !resolvedAbsolute).join('/');
-	
-	  return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
-	};
-	
-	// path.normalize(path)
-	// posix version
-	exports.normalize = function(path) {
-	  var isAbsolute = exports.isAbsolute(path),
-	      trailingSlash = substr(path, -1) === '/';
-	
-	  // Normalize the path
-	  path = normalizeArray(filter(path.split('/'), function(p) {
-	    return !!p;
-	  }), !isAbsolute).join('/');
-	
-	  if (!path && !isAbsolute) {
-	    path = '.';
-	  }
-	  if (path && trailingSlash) {
-	    path += '/';
-	  }
-	
-	  return (isAbsolute ? '/' : '') + path;
-	};
-	
-	// posix version
-	exports.isAbsolute = function(path) {
-	  return path.charAt(0) === '/';
-	};
-	
-	// posix version
-	exports.join = function() {
-	  var paths = Array.prototype.slice.call(arguments, 0);
-	  return exports.normalize(filter(paths, function(p, index) {
-	    if (typeof p !== 'string') {
-	      throw new TypeError('Arguments to path.join must be strings');
-	    }
-	    return p;
-	  }).join('/'));
-	};
-	
-	
-	// path.relative(from, to)
-	// posix version
-	exports.relative = function(from, to) {
-	  from = exports.resolve(from).substr(1);
-	  to = exports.resolve(to).substr(1);
-	
-	  function trim(arr) {
-	    var start = 0;
-	    for (; start < arr.length; start++) {
-	      if (arr[start] !== '') break;
-	    }
-	
-	    var end = arr.length - 1;
-	    for (; end >= 0; end--) {
-	      if (arr[end] !== '') break;
-	    }
-	
-	    if (start > end) return [];
-	    return arr.slice(start, end - start + 1);
-	  }
-	
-	  var fromParts = trim(from.split('/'));
-	  var toParts = trim(to.split('/'));
-	
-	  var length = Math.min(fromParts.length, toParts.length);
-	  var samePartsLength = length;
-	  for (var i = 0; i < length; i++) {
-	    if (fromParts[i] !== toParts[i]) {
-	      samePartsLength = i;
-	      break;
-	    }
-	  }
-	
-	  var outputParts = [];
-	  for (var i = samePartsLength; i < fromParts.length; i++) {
-	    outputParts.push('..');
-	  }
-	
-	  outputParts = outputParts.concat(toParts.slice(samePartsLength));
-	
-	  return outputParts.join('/');
-	};
-	
-	exports.sep = '/';
-	exports.delimiter = ':';
-	
-	exports.dirname = function(path) {
-	  var result = splitPath(path),
-	      root = result[0],
-	      dir = result[1];
-	
-	  if (!root && !dir) {
-	    // No dirname whatsoever
-	    return '.';
-	  }
-	
-	  if (dir) {
-	    // It has a dirname, strip trailing slash
-	    dir = dir.substr(0, dir.length - 1);
-	  }
-	
-	  return root + dir;
-	};
-	
-	
-	exports.basename = function(path, ext) {
-	  var f = splitPath(path)[2];
-	  // TODO: make this comparison case-insensitive on windows?
-	  if (ext && f.substr(-1 * ext.length) === ext) {
-	    f = f.substr(0, f.length - ext.length);
-	  }
-	  return f;
-	};
-	
-	
-	exports.extname = function(path) {
-	  return splitPath(path)[3];
-	};
-	
-	function filter (xs, f) {
-	    if (xs.filter) return xs.filter(f);
-	    var res = [];
-	    for (var i = 0; i < xs.length; i++) {
-	        if (f(xs[i], i, xs)) res.push(xs[i]);
-	    }
-	    return res;
-	}
-	
-	// String.prototype.substr - negative index don't work in IE8
-	var substr = 'ab'.substr(-1) === 'b'
-	    ? function (str, start, len) { return str.substr(start, len) }
-	    : function (str, start, len) {
-	        if (start < 0) start = str.length + start;
-	        return str.substr(start, len);
-	    }
-	;
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13)))
-
-/***/ },
-/* 13 */
-/***/ function(module, exports) {
-
-	// shim for using process in browser
-	var process = module.exports = {};
-	
-	// cached from whatever global is present so that test runners that stub it
-	// don't break things.  But we need to wrap it in a try catch in case it is
-	// wrapped in strict mode code which doesn't define any globals.  It's inside a
-	// function because try/catches deoptimize in certain engines.
-	
-	var cachedSetTimeout;
-	var cachedClearTimeout;
-	
-	function defaultSetTimout() {
-	    throw new Error('setTimeout has not been defined');
-	}
-	function defaultClearTimeout () {
-	    throw new Error('clearTimeout has not been defined');
-	}
-	(function () {
-	    try {
-	        if (typeof setTimeout === 'function') {
-	            cachedSetTimeout = setTimeout;
-	        } else {
-	            cachedSetTimeout = defaultSetTimout;
-	        }
-	    } catch (e) {
-	        cachedSetTimeout = defaultSetTimout;
-	    }
-	    try {
-	        if (typeof clearTimeout === 'function') {
-	            cachedClearTimeout = clearTimeout;
-	        } else {
-	            cachedClearTimeout = defaultClearTimeout;
-	        }
-	    } catch (e) {
-	        cachedClearTimeout = defaultClearTimeout;
-	    }
-	} ())
-	function runTimeout(fun) {
-	    if (cachedSetTimeout === setTimeout) {
-	        //normal enviroments in sane situations
-	        return setTimeout(fun, 0);
-	    }
-	    // if setTimeout wasn't available but was latter defined
-	    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-	        cachedSetTimeout = setTimeout;
-	        return setTimeout(fun, 0);
-	    }
-	    try {
-	        // when when somebody has screwed with setTimeout but no I.E. maddness
-	        return cachedSetTimeout(fun, 0);
-	    } catch(e){
-	        try {
-	            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-	            return cachedSetTimeout.call(null, fun, 0);
-	        } catch(e){
-	            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-	            return cachedSetTimeout.call(this, fun, 0);
-	        }
-	    }
-	
-	
-	}
-	function runClearTimeout(marker) {
-	    if (cachedClearTimeout === clearTimeout) {
-	        //normal enviroments in sane situations
-	        return clearTimeout(marker);
-	    }
-	    // if clearTimeout wasn't available but was latter defined
-	    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-	        cachedClearTimeout = clearTimeout;
-	        return clearTimeout(marker);
-	    }
-	    try {
-	        // when when somebody has screwed with setTimeout but no I.E. maddness
-	        return cachedClearTimeout(marker);
-	    } catch (e){
-	        try {
-	            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-	            return cachedClearTimeout.call(null, marker);
-	        } catch (e){
-	            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-	            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-	            return cachedClearTimeout.call(this, marker);
-	        }
-	    }
-	
-	
-	
-	}
-	var queue = [];
-	var draining = false;
-	var currentQueue;
-	var queueIndex = -1;
-	
-	function cleanUpNextTick() {
-	    if (!draining || !currentQueue) {
-	        return;
-	    }
-	    draining = false;
-	    if (currentQueue.length) {
-	        queue = currentQueue.concat(queue);
-	    } else {
-	        queueIndex = -1;
-	    }
-	    if (queue.length) {
-	        drainQueue();
-	    }
-	}
-	
-	function drainQueue() {
-	    if (draining) {
-	        return;
-	    }
-	    var timeout = runTimeout(cleanUpNextTick);
-	    draining = true;
-	
-	    var len = queue.length;
-	    while(len) {
-	        currentQueue = queue;
-	        queue = [];
-	        while (++queueIndex < len) {
-	            if (currentQueue) {
-	                currentQueue[queueIndex].run();
-	            }
-	        }
-	        queueIndex = -1;
-	        len = queue.length;
-	    }
-	    currentQueue = null;
-	    draining = false;
-	    runClearTimeout(timeout);
-	}
-	
-	process.nextTick = function (fun) {
-	    var args = new Array(arguments.length - 1);
-	    if (arguments.length > 1) {
-	        for (var i = 1; i < arguments.length; i++) {
-	            args[i - 1] = arguments[i];
-	        }
-	    }
-	    queue.push(new Item(fun, args));
-	    if (queue.length === 1 && !draining) {
-	        runTimeout(drainQueue);
-	    }
-	};
-	
-	// v8 likes predictible objects
-	function Item(fun, array) {
-	    this.fun = fun;
-	    this.array = array;
-	}
-	Item.prototype.run = function () {
-	    this.fun.apply(null, this.array);
-	};
-	process.title = 'browser';
-	process.browser = true;
-	process.env = {};
-	process.argv = [];
-	process.version = ''; // empty string to avoid regexp issues
-	process.versions = {};
-	
-	function noop() {}
-	
-	process.on = noop;
-	process.addListener = noop;
-	process.once = noop;
-	process.off = noop;
-	process.removeListener = noop;
-	process.removeAllListeners = noop;
-	process.emit = noop;
-	
-	process.binding = function (name) {
-	    throw new Error('process.binding is not supported');
-	};
-	
-	process.cwd = function () { return '/' };
-	process.chdir = function (dir) {
-	    throw new Error('process.chdir is not supported');
-	};
-	process.umask = function() { return 0; };
-
-
-/***/ },
-/* 14 */
-/***/ function(module, exports) {
-
-
-
-/***/ },
-/* 15 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-	var http = __webpack_require__(16);
-	function retrieveRemoteFile(url, cb) {
-	    if (typeof cb !== 'function') {
-	        throw new Error('Provided callback is not a function.');
-	    }
-	    return http.get(url, function (response) {
-	        var body = '';
-	        response.on('data', function (d) {
-	            body += d;
-	        });
-	        response.on('end', function () {
-	            cb(body);
-	        });
-	    });
-	}
-	exports.retrieveRemoteFile = retrieveRemoteFile;
-
-
-/***/ },
-/* 16 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var http = module.exports;
-	var EventEmitter = __webpack_require__(17).EventEmitter;
-	var Request = __webpack_require__(24);
-	var url = __webpack_require__(47)
-	
-	http.request = function (params, cb) {
-	    if (typeof params === 'string') {
-	        params = url.parse(params)
-	    }
-	    if (!params) params = {};
-	    if (!params.host && !params.port) {
-	        params.port = parseInt(window.location.port, 10);
-	    }
-	    if (!params.host && params.hostname) {
-	        params.host = params.hostname;
-	    }
-	
-	    if (!params.protocol) {
-	        if (params.scheme) {
-	            params.protocol = params.scheme + ':';
-	        } else {
-	            params.protocol = window.location.protocol;
-	        }
-	    }
-	
-	    if (!params.host) {
-	        params.host = window.location.hostname || window.location.host;
-	    }
-	    if (/:/.test(params.host)) {
-	        if (!params.port) {
-	            params.port = params.host.split(':')[1];
-	        }
-	        params.host = params.host.split(':')[0];
-	    }
-	    if (!params.port) params.port = params.protocol == 'https:' ? 443 : 80;
-	    
-	    var req = new Request(new xhrHttp, params);
-	    if (cb) req.on('response', cb);
-	    return req;
-	};
-	
-	http.get = function (params, cb) {
-	    params.method = 'GET';
-	    var req = http.request(params, cb);
-	    req.end();
-	    return req;
-	};
-	
-	http.Agent = function () {};
-	http.Agent.defaultMaxSockets = 4;
-	
-	var xhrHttp = (function () {
-	    if (typeof window === 'undefined') {
-	        throw new Error('no window object present');
-	    }
-	    else if (window.XMLHttpRequest) {
-	        return window.XMLHttpRequest;
-	    }
-	    else if (window.ActiveXObject) {
-	        var axs = [
-	            'Msxml2.XMLHTTP.6.0',
-	            'Msxml2.XMLHTTP.3.0',
-	            'Microsoft.XMLHTTP'
-	        ];
-	        for (var i = 0; i < axs.length; i++) {
-	            try {
-	                var ax = new(window.ActiveXObject)(axs[i]);
-	                return function () {
-	                    if (ax) {
-	                        var ax_ = ax;
-	                        ax = null;
-	                        return ax_;
-	                    }
-	                    else {
-	                        return new(window.ActiveXObject)(axs[i]);
-	                    }
-	                };
-	            }
-	            catch (e) {}
-	        }
-	        throw new Error('ajax not supported in this browser')
-	    }
-	    else {
-	        throw new Error('ajax not supported in this browser');
-	    }
-	})();
-	
-	http.STATUS_CODES = {
-	    100 : 'Continue',
-	    101 : 'Switching Protocols',
-	    102 : 'Processing',                 // RFC 2518, obsoleted by RFC 4918
-	    200 : 'OK',
-	    201 : 'Created',
-	    202 : 'Accepted',
-	    203 : 'Non-Authoritative Information',
-	    204 : 'No Content',
-	    205 : 'Reset Content',
-	    206 : 'Partial Content',
-	    207 : 'Multi-Status',               // RFC 4918
-	    300 : 'Multiple Choices',
-	    301 : 'Moved Permanently',
-	    302 : 'Moved Temporarily',
-	    303 : 'See Other',
-	    304 : 'Not Modified',
-	    305 : 'Use Proxy',
-	    307 : 'Temporary Redirect',
-	    400 : 'Bad Request',
-	    401 : 'Unauthorized',
-	    402 : 'Payment Required',
-	    403 : 'Forbidden',
-	    404 : 'Not Found',
-	    405 : 'Method Not Allowed',
-	    406 : 'Not Acceptable',
-	    407 : 'Proxy Authentication Required',
-	    408 : 'Request Time-out',
-	    409 : 'Conflict',
-	    410 : 'Gone',
-	    411 : 'Length Required',
-	    412 : 'Precondition Failed',
-	    413 : 'Request Entity Too Large',
-	    414 : 'Request-URI Too Large',
-	    415 : 'Unsupported Media Type',
-	    416 : 'Requested Range Not Satisfiable',
-	    417 : 'Expectation Failed',
-	    418 : 'I\'m a teapot',              // RFC 2324
-	    422 : 'Unprocessable Entity',       // RFC 4918
-	    423 : 'Locked',                     // RFC 4918
-	    424 : 'Failed Dependency',          // RFC 4918
-	    425 : 'Unordered Collection',       // RFC 4918
-	    426 : 'Upgrade Required',           // RFC 2817
-	    428 : 'Precondition Required',      // RFC 6585
-	    429 : 'Too Many Requests',          // RFC 6585
-	    431 : 'Request Header Fields Too Large',// RFC 6585
-	    500 : 'Internal Server Error',
-	    501 : 'Not Implemented',
-	    502 : 'Bad Gateway',
-	    503 : 'Service Unavailable',
-	    504 : 'Gateway Time-out',
-	    505 : 'HTTP Version Not Supported',
-	    506 : 'Variant Also Negotiates',    // RFC 2295
-	    507 : 'Insufficient Storage',       // RFC 4918
-	    509 : 'Bandwidth Limit Exceeded',
-	    510 : 'Not Extended',               // RFC 2774
-	    511 : 'Network Authentication Required' // RFC 6585
-	};
-
-/***/ },
-/* 17 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* WEBPACK VAR INJECTION */(function(console) {// Copyright Joyent, Inc. and other Node contributors.
-	//
-	// Permission is hereby granted, free of charge, to any person obtaining a
-	// copy of this software and associated documentation files (the
-	// "Software"), to deal in the Software without restriction, including
-	// without limitation the rights to use, copy, modify, merge, publish,
-	// distribute, sublicense, and/or sell copies of the Software, and to permit
-	// persons to whom the Software is furnished to do so, subject to the
-	// following conditions:
-	//
-	// The above copyright notice and this permission notice shall be included
-	// in all copies or substantial portions of the Software.
-	//
-	// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-	// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-	// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-	// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-	// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-	// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-	// USE OR OTHER DEALINGS IN THE SOFTWARE.
-	
-	function EventEmitter() {
-	  this._events = this._events || {};
-	  this._maxListeners = this._maxListeners || undefined;
-	}
-	module.exports = EventEmitter;
-	
-	// Backwards-compat with node 0.10.x
-	EventEmitter.EventEmitter = EventEmitter;
-	
-	EventEmitter.prototype._events = undefined;
-	EventEmitter.prototype._maxListeners = undefined;
-	
-	// By default EventEmitters will print a warning if more than 10 listeners are
-	// added to it. This is a useful default which helps finding memory leaks.
-	EventEmitter.defaultMaxListeners = 10;
-	
-	// Obviously not all Emitters should be limited to 10. This function allows
-	// that to be increased. Set to zero for unlimited.
-	EventEmitter.prototype.setMaxListeners = function(n) {
-	  if (!isNumber(n) || n < 0 || isNaN(n))
-	    throw TypeError('n must be a positive number');
-	  this._maxListeners = n;
-	  return this;
-	};
-	
-	EventEmitter.prototype.emit = function(type) {
-	  var er, handler, len, args, i, listeners;
-	
-	  if (!this._events)
-	    this._events = {};
-	
-	  // If there is no 'error' event listener then throw.
-	  if (type === 'error') {
-	    if (!this._events.error ||
-	        (isObject(this._events.error) && !this._events.error.length)) {
-	      er = arguments[1];
-	      if (er instanceof Error) {
-	        throw er; // Unhandled 'error' event
-	      } else {
-	        // At least give some kind of context to the user
-	        var err = new Error('Uncaught, unspecified "error" event. (' + er + ')');
-	        err.context = er;
-	        throw err;
-	      }
-	    }
-	  }
-	
-	  handler = this._events[type];
-	
-	  if (isUndefined(handler))
-	    return false;
-	
-	  if (isFunction(handler)) {
-	    switch (arguments.length) {
-	      // fast cases
-	      case 1:
-	        handler.call(this);
-	        break;
-	      case 2:
-	        handler.call(this, arguments[1]);
-	        break;
-	      case 3:
-	        handler.call(this, arguments[1], arguments[2]);
-	        break;
-	      // slower
-	      default:
-	        args = Array.prototype.slice.call(arguments, 1);
-	        handler.apply(this, args);
-	    }
-	  } else if (isObject(handler)) {
-	    args = Array.prototype.slice.call(arguments, 1);
-	    listeners = handler.slice();
-	    len = listeners.length;
-	    for (i = 0; i < len; i++)
-	      listeners[i].apply(this, args);
-	  }
-	
-	  return true;
-	};
-	
-	EventEmitter.prototype.addListener = function(type, listener) {
-	  var m;
-	
-	  if (!isFunction(listener))
-	    throw TypeError('listener must be a function');
-	
-	  if (!this._events)
-	    this._events = {};
-	
-	  // To avoid recursion in the case that type === "newListener"! Before
-	  // adding it to the listeners, first emit "newListener".
-	  if (this._events.newListener)
-	    this.emit('newListener', type,
-	              isFunction(listener.listener) ?
-	              listener.listener : listener);
-	
-	  if (!this._events[type])
-	    // Optimize the case of one listener. Don't need the extra array object.
-	    this._events[type] = listener;
-	  else if (isObject(this._events[type]))
-	    // If we've already got an array, just append.
-	    this._events[type].push(listener);
-	  else
-	    // Adding the second element, need to change to array.
-	    this._events[type] = [this._events[type], listener];
-	
-	  // Check for listener leak
-	  if (isObject(this._events[type]) && !this._events[type].warned) {
-	    if (!isUndefined(this._maxListeners)) {
-	      m = this._maxListeners;
-	    } else {
-	      m = EventEmitter.defaultMaxListeners;
-	    }
-	
-	    if (m && m > 0 && this._events[type].length > m) {
-	      this._events[type].warned = true;
-	      console.error('(node) warning: possible EventEmitter memory ' +
-	                    'leak detected. %d listeners added. ' +
-	                    'Use emitter.setMaxListeners() to increase limit.',
-	                    this._events[type].length);
-	      if (typeof console.trace === 'function') {
-	        // not supported in IE 10
-	        console.trace();
-	      }
-	    }
-	  }
-	
-	  return this;
-	};
-	
-	EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-	
-	EventEmitter.prototype.once = function(type, listener) {
-	  if (!isFunction(listener))
-	    throw TypeError('listener must be a function');
-	
-	  var fired = false;
-	
-	  function g() {
-	    this.removeListener(type, g);
-	
-	    if (!fired) {
-	      fired = true;
-	      listener.apply(this, arguments);
-	    }
-	  }
-	
-	  g.listener = listener;
-	  this.on(type, g);
-	
-	  return this;
-	};
-	
-	// emits a 'removeListener' event iff the listener was removed
-	EventEmitter.prototype.removeListener = function(type, listener) {
-	  var list, position, length, i;
-	
-	  if (!isFunction(listener))
-	    throw TypeError('listener must be a function');
-	
-	  if (!this._events || !this._events[type])
-	    return this;
-	
-	  list = this._events[type];
-	  length = list.length;
-	  position = -1;
-	
-	  if (list === listener ||
-	      (isFunction(list.listener) && list.listener === listener)) {
-	    delete this._events[type];
-	    if (this._events.removeListener)
-	      this.emit('removeListener', type, listener);
-	
-	  } else if (isObject(list)) {
-	    for (i = length; i-- > 0;) {
-	      if (list[i] === listener ||
-	          (list[i].listener && list[i].listener === listener)) {
-	        position = i;
-	        break;
-	      }
-	    }
-	
-	    if (position < 0)
-	      return this;
-	
-	    if (list.length === 1) {
-	      list.length = 0;
-	      delete this._events[type];
-	    } else {
-	      list.splice(position, 1);
-	    }
-	
-	    if (this._events.removeListener)
-	      this.emit('removeListener', type, listener);
-	  }
-	
-	  return this;
-	};
-	
-	EventEmitter.prototype.removeAllListeners = function(type) {
-	  var key, listeners;
-	
-	  if (!this._events)
-	    return this;
-	
-	  // not listening for removeListener, no need to emit
-	  if (!this._events.removeListener) {
-	    if (arguments.length === 0)
-	      this._events = {};
-	    else if (this._events[type])
-	      delete this._events[type];
-	    return this;
-	  }
-	
-	  // emit removeListener for all listeners on all events
-	  if (arguments.length === 0) {
-	    for (key in this._events) {
-	      if (key === 'removeListener') continue;
-	      this.removeAllListeners(key);
-	    }
-	    this.removeAllListeners('removeListener');
-	    this._events = {};
-	    return this;
-	  }
-	
-	  listeners = this._events[type];
-	
-	  if (isFunction(listeners)) {
-	    this.removeListener(type, listeners);
-	  } else if (listeners) {
-	    // LIFO order
-	    while (listeners.length)
-	      this.removeListener(type, listeners[listeners.length - 1]);
-	  }
-	  delete this._events[type];
-	
-	  return this;
-	};
-	
-	EventEmitter.prototype.listeners = function(type) {
-	  var ret;
-	  if (!this._events || !this._events[type])
-	    ret = [];
-	  else if (isFunction(this._events[type]))
-	    ret = [this._events[type]];
-	  else
-	    ret = this._events[type].slice();
-	  return ret;
-	};
-	
-	EventEmitter.prototype.listenerCount = function(type) {
-	  if (this._events) {
-	    var evlistener = this._events[type];
-	
-	    if (isFunction(evlistener))
-	      return 1;
-	    else if (evlistener)
-	      return evlistener.length;
-	  }
-	  return 0;
-	};
-	
-	EventEmitter.listenerCount = function(emitter, type) {
-	  return emitter.listenerCount(type);
-	};
-	
-	function isFunction(arg) {
-	  return typeof arg === 'function';
-	}
-	
-	function isNumber(arg) {
-	  return typeof arg === 'number';
-	}
-	
-	function isObject(arg) {
-	  return typeof arg === 'object' && arg !== null;
-	}
-	
-	function isUndefined(arg) {
-	  return arg === void 0;
-	}
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(18)))
-
-/***/ },
-/* 18 */
-/***/ function(module, exports, __webpack_require__) {
-
 	/* WEBPACK VAR INJECTION */(function(global) {/*global window, global*/
-	var util = __webpack_require__(19)
-	var assert = __webpack_require__(22)
-	var now = __webpack_require__(23)
+	var util = __webpack_require__(13)
+	var assert = __webpack_require__(17)
+	var now = __webpack_require__(18)
 	
 	var slice = Array.prototype.slice
 	var console
@@ -2144,7 +1150,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 19 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, process, console) {// Copyright Joyent, Inc. and other Node contributors.
@@ -2672,7 +1678,7 @@
 	}
 	exports.isPrimitive = isPrimitive;
 	
-	exports.isBuffer = __webpack_require__(20);
+	exports.isBuffer = __webpack_require__(15);
 	
 	function objectToString(o) {
 	  return Object.prototype.toString.call(o);
@@ -2716,7 +1722,7 @@
 	 *     prototype.
 	 * @param {function} superCtor Constructor function to inherit prototype from.
 	 */
-	exports.inherits = __webpack_require__(21);
+	exports.inherits = __webpack_require__(16);
 	
 	exports._extend = function(origin, add) {
 	  // Don't do anything if add isn't an object
@@ -2734,10 +1740,196 @@
 	  return Object.prototype.hasOwnProperty.call(obj, prop);
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(13), __webpack_require__(18)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(14), __webpack_require__(12)))
 
 /***/ },
-/* 20 */
+/* 14 */
+/***/ function(module, exports) {
+
+	// shim for using process in browser
+	var process = module.exports = {};
+	
+	// cached from whatever global is present so that test runners that stub it
+	// don't break things.  But we need to wrap it in a try catch in case it is
+	// wrapped in strict mode code which doesn't define any globals.  It's inside a
+	// function because try/catches deoptimize in certain engines.
+	
+	var cachedSetTimeout;
+	var cachedClearTimeout;
+	
+	function defaultSetTimout() {
+	    throw new Error('setTimeout has not been defined');
+	}
+	function defaultClearTimeout () {
+	    throw new Error('clearTimeout has not been defined');
+	}
+	(function () {
+	    try {
+	        if (typeof setTimeout === 'function') {
+	            cachedSetTimeout = setTimeout;
+	        } else {
+	            cachedSetTimeout = defaultSetTimout;
+	        }
+	    } catch (e) {
+	        cachedSetTimeout = defaultSetTimout;
+	    }
+	    try {
+	        if (typeof clearTimeout === 'function') {
+	            cachedClearTimeout = clearTimeout;
+	        } else {
+	            cachedClearTimeout = defaultClearTimeout;
+	        }
+	    } catch (e) {
+	        cachedClearTimeout = defaultClearTimeout;
+	    }
+	} ())
+	function runTimeout(fun) {
+	    if (cachedSetTimeout === setTimeout) {
+	        //normal enviroments in sane situations
+	        return setTimeout(fun, 0);
+	    }
+	    // if setTimeout wasn't available but was latter defined
+	    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+	        cachedSetTimeout = setTimeout;
+	        return setTimeout(fun, 0);
+	    }
+	    try {
+	        // when when somebody has screwed with setTimeout but no I.E. maddness
+	        return cachedSetTimeout(fun, 0);
+	    } catch(e){
+	        try {
+	            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+	            return cachedSetTimeout.call(null, fun, 0);
+	        } catch(e){
+	            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+	            return cachedSetTimeout.call(this, fun, 0);
+	        }
+	    }
+	
+	
+	}
+	function runClearTimeout(marker) {
+	    if (cachedClearTimeout === clearTimeout) {
+	        //normal enviroments in sane situations
+	        return clearTimeout(marker);
+	    }
+	    // if clearTimeout wasn't available but was latter defined
+	    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+	        cachedClearTimeout = clearTimeout;
+	        return clearTimeout(marker);
+	    }
+	    try {
+	        // when when somebody has screwed with setTimeout but no I.E. maddness
+	        return cachedClearTimeout(marker);
+	    } catch (e){
+	        try {
+	            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+	            return cachedClearTimeout.call(null, marker);
+	        } catch (e){
+	            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+	            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+	            return cachedClearTimeout.call(this, marker);
+	        }
+	    }
+	
+	
+	
+	}
+	var queue = [];
+	var draining = false;
+	var currentQueue;
+	var queueIndex = -1;
+	
+	function cleanUpNextTick() {
+	    if (!draining || !currentQueue) {
+	        return;
+	    }
+	    draining = false;
+	    if (currentQueue.length) {
+	        queue = currentQueue.concat(queue);
+	    } else {
+	        queueIndex = -1;
+	    }
+	    if (queue.length) {
+	        drainQueue();
+	    }
+	}
+	
+	function drainQueue() {
+	    if (draining) {
+	        return;
+	    }
+	    var timeout = runTimeout(cleanUpNextTick);
+	    draining = true;
+	
+	    var len = queue.length;
+	    while(len) {
+	        currentQueue = queue;
+	        queue = [];
+	        while (++queueIndex < len) {
+	            if (currentQueue) {
+	                currentQueue[queueIndex].run();
+	            }
+	        }
+	        queueIndex = -1;
+	        len = queue.length;
+	    }
+	    currentQueue = null;
+	    draining = false;
+	    runClearTimeout(timeout);
+	}
+	
+	process.nextTick = function (fun) {
+	    var args = new Array(arguments.length - 1);
+	    if (arguments.length > 1) {
+	        for (var i = 1; i < arguments.length; i++) {
+	            args[i - 1] = arguments[i];
+	        }
+	    }
+	    queue.push(new Item(fun, args));
+	    if (queue.length === 1 && !draining) {
+	        runTimeout(drainQueue);
+	    }
+	};
+	
+	// v8 likes predictible objects
+	function Item(fun, array) {
+	    this.fun = fun;
+	    this.array = array;
+	}
+	Item.prototype.run = function () {
+	    this.fun.apply(null, this.array);
+	};
+	process.title = 'browser';
+	process.browser = true;
+	process.env = {};
+	process.argv = [];
+	process.version = ''; // empty string to avoid regexp issues
+	process.versions = {};
+	
+	function noop() {}
+	
+	process.on = noop;
+	process.addListener = noop;
+	process.once = noop;
+	process.off = noop;
+	process.removeListener = noop;
+	process.removeAllListeners = noop;
+	process.emit = noop;
+	
+	process.binding = function (name) {
+	    throw new Error('process.binding is not supported');
+	};
+	
+	process.cwd = function () { return '/' };
+	process.chdir = function (dir) {
+	    throw new Error('process.chdir is not supported');
+	};
+	process.umask = function() { return 0; };
+
+
+/***/ },
+/* 15 */
 /***/ function(module, exports) {
 
 	module.exports = function isBuffer(arg) {
@@ -2748,7 +1940,7 @@
 	}
 
 /***/ },
-/* 21 */
+/* 16 */
 /***/ function(module, exports) {
 
 	if (typeof Object.create === 'function') {
@@ -2777,7 +1969,7 @@
 
 
 /***/ },
-/* 22 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
@@ -2848,7 +2040,7 @@
 	// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 	// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	
-	var util = __webpack_require__(19);
+	var util = __webpack_require__(13);
 	var hasOwn = Object.prototype.hasOwnProperty;
 	var pSlice = Array.prototype.slice;
 	var functionsHaveNames = (function () {
@@ -3274,7 +2466,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 23 */
+/* 18 */
 /***/ function(module, exports) {
 
 	module.exports = now
@@ -3285,13 +2477,878 @@
 
 
 /***/ },
+/* 19 */
+/***/ function(module, exports) {
+
+	var LOG_LEVELS = {
+	  debug: "DEBUG",
+	  production: "PRODUCTION"
+	};
+	
+	var RUN_CONFIG = {
+	  log_level: LOG_LEVELS.debug
+	};
+	
+	module.exports = {
+	  LOG_LEVELS: LOG_LEVELS,
+	  RUN_CONFIG: RUN_CONFIG
+	};
+
+/***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var path = __webpack_require__(21);
+	var fs = __webpack_require__(22);
+	var $G = __webpack_require__(10);
+	var $R = __webpack_require__(23);
+	var CSVInput = (function () {
+	    function CSVInput(_separator, _explicit_direction, _direction_mode) {
+	        if (_separator === void 0) { _separator = ','; }
+	        if (_explicit_direction === void 0) { _explicit_direction = true; }
+	        if (_direction_mode === void 0) { _direction_mode = false; }
+	        this._separator = _separator;
+	        this._explicit_direction = _explicit_direction;
+	        this._direction_mode = _direction_mode;
+	    }
+	    CSVInput.prototype.readFromAdjacencyListURL = function (fileurl, cb) {
+	        this.readGraphFromURL(fileurl, cb, this.readFromAdjacencyList);
+	    };
+	    CSVInput.prototype.readFromEdgeListURL = function (fileurl, cb) {
+	        this.readGraphFromURL(fileurl, cb, this.readFromEdgeList);
+	    };
+	    CSVInput.prototype.readGraphFromURL = function (fileurl, cb, localFun) {
+	        var self = this, graph_name = path.basename(fileurl), graph, request;
+	        if (typeof window !== 'undefined') {
+	            request = new XMLHttpRequest();
+	            request.onreadystatechange = function () {
+	                if (request.readyState == 4 && request.status == 200) {
+	                    var input = request.responseText.split('\n');
+	                    graph = localFun.apply(self, [input, graph_name]);
+	                    cb(graph, undefined);
+	                }
+	            };
+	            request.open("GET", fileurl, true);
+	            request.setRequestHeader('Content-Type', 'text/csv; charset=ISO-8859-1');
+	            request.send();
+	        }
+	        else {
+	            $R.retrieveRemoteFile(fileurl, function (raw_graph) {
+	                var input = raw_graph.toString().split('\n');
+	                graph = localFun.apply(self, [input, graph_name]);
+	                cb(graph, undefined);
+	            });
+	        }
+	    };
+	    CSVInput.prototype.readFromAdjacencyListFile = function (filepath) {
+	        return this.readFileAndReturn(filepath, this.readFromAdjacencyList);
+	    };
+	    CSVInput.prototype.readFromEdgeListFile = function (filepath) {
+	        return this.readFileAndReturn(filepath, this.readFromEdgeList);
+	    };
+	    CSVInput.prototype.readFileAndReturn = function (filepath, func) {
+	        this.checkNodeEnvironment();
+	        var graph_name = path.basename(filepath);
+	        var input = fs.readFileSync(filepath).toString().split('\n');
+	        return func.apply(this, [input, graph_name]);
+	    };
+	    CSVInput.prototype.readFromAdjacencyList = function (input, graph_name) {
+	        var graph = new $G.BaseGraph(graph_name);
+	        for (var idx in input) {
+	            var line = input[idx], elements = this._separator.match(/\s+/g) ? line.match(/\S+/g) : line.replace(/\s+/g, '').split(this._separator), node_id = elements[0], node, edge_array = elements.slice(1), edge, target_node_id, target_node, dir_char, directed, edge_id, edge_id_u2;
+	            if (!node_id) {
+	                continue;
+	            }
+	            node = graph.hasNodeID(node_id) ? graph.getNodeById(node_id) : graph.addNode(node_id);
+	            for (var e = 0; e < edge_array.length;) {
+	                if (this._explicit_direction && (!edge_array || edge_array.length % 2)) {
+	                    throw new Error('Every edge entry has to contain its direction info in explicit mode.');
+	                }
+	                target_node_id = edge_array[e++];
+	                target_node = graph.hasNodeID(target_node_id) ? graph.getNodeById(target_node_id) : graph.addNode(target_node_id);
+	                dir_char = this._explicit_direction ? edge_array[e++] : this._direction_mode ? 'd' : 'u';
+	                if (dir_char !== 'd' && dir_char !== 'u') {
+	                    throw new Error("Specification of edge direction invalid (d and u are valid).");
+	                }
+	                directed = dir_char === 'd';
+	                edge_id = node_id + "_" + target_node_id + "_" + dir_char;
+	                edge_id_u2 = target_node_id + "_" + node_id + "_" + dir_char;
+	                if (graph.hasEdgeID(edge_id) || (!directed && graph.hasEdgeID(edge_id_u2))) {
+	                    continue;
+	                }
+	                else {
+	                    edge = graph.addEdge(edge_id, node, target_node, { directed: directed });
+	                }
+	            }
+	        }
+	        return graph;
+	    };
+	    CSVInput.prototype.readFromEdgeList = function (input, graph_name) {
+	        var graph = new $G.BaseGraph(graph_name);
+	        for (var idx in input) {
+	            var line = input[idx], elements = this._separator.match(/\s+/g) ? line.match(/\S+/g) : line.replace(/\s+/g, '').split(this._separator);
+	            if (!elements) {
+	                continue;
+	            }
+	            if (elements.length < 2) {
+	                throw new Error('Edge list is in wrong format - every line has to consist of two entries (the 2 nodes)');
+	            }
+	            var node_id = elements[0], node, target_node, edge, target_node_id = elements[1], dir_char = this._explicit_direction ? elements[2] : this._direction_mode ? 'd' : 'u', directed, edge_id, edge_id_u2;
+	            node = graph.hasNodeID(node_id) ? graph.getNodeById(node_id) : graph.addNode(node_id);
+	            target_node = graph.hasNodeID(target_node_id) ? graph.getNodeById(target_node_id) : graph.addNode(target_node_id);
+	            if (dir_char !== 'd' && dir_char !== 'u') {
+	                throw new Error("Specification of edge direction invalid (d and u are valid).");
+	            }
+	            directed = dir_char === 'd';
+	            edge_id = node_id + "_" + target_node_id + "_" + dir_char;
+	            edge_id_u2 = target_node_id + "_" + node_id + "_" + dir_char;
+	            if (graph.hasEdgeID(edge_id) || (!directed && graph.hasEdgeID(edge_id_u2))) {
+	                continue;
+	            }
+	            else {
+	                edge = graph.addEdge(edge_id, node, target_node, { directed: directed });
+	            }
+	        }
+	        return graph;
+	    };
+	    CSVInput.prototype.checkNodeEnvironment = function () {
+	        if (typeof window !== 'undefined') {
+	            throw new Error('Cannot read file in browser environment.');
+	        }
+	    };
+	    return CSVInput;
+	}());
+	exports.CSVInput = CSVInput;
+
+
+/***/ },
+/* 21 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(process) {// Copyright Joyent, Inc. and other Node contributors.
+	//
+	// Permission is hereby granted, free of charge, to any person obtaining a
+	// copy of this software and associated documentation files (the
+	// "Software"), to deal in the Software without restriction, including
+	// without limitation the rights to use, copy, modify, merge, publish,
+	// distribute, sublicense, and/or sell copies of the Software, and to permit
+	// persons to whom the Software is furnished to do so, subject to the
+	// following conditions:
+	//
+	// The above copyright notice and this permission notice shall be included
+	// in all copies or substantial portions of the Software.
+	//
+	// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+	// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+	// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+	// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+	// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+	// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+	// USE OR OTHER DEALINGS IN THE SOFTWARE.
+	
+	// resolves . and .. elements in a path array with directory names there
+	// must be no slashes, empty elements, or device names (c:\) in the array
+	// (so also no leading and trailing slashes - it does not distinguish
+	// relative and absolute paths)
+	function normalizeArray(parts, allowAboveRoot) {
+	  // if the path tries to go above the root, `up` ends up > 0
+	  var up = 0;
+	  for (var i = parts.length - 1; i >= 0; i--) {
+	    var last = parts[i];
+	    if (last === '.') {
+	      parts.splice(i, 1);
+	    } else if (last === '..') {
+	      parts.splice(i, 1);
+	      up++;
+	    } else if (up) {
+	      parts.splice(i, 1);
+	      up--;
+	    }
+	  }
+	
+	  // if the path is allowed to go above the root, restore leading ..s
+	  if (allowAboveRoot) {
+	    for (; up--; up) {
+	      parts.unshift('..');
+	    }
+	  }
+	
+	  return parts;
+	}
+	
+	// Split a filename into [root, dir, basename, ext], unix version
+	// 'root' is just a slash, or nothing.
+	var splitPathRe =
+	    /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
+	var splitPath = function(filename) {
+	  return splitPathRe.exec(filename).slice(1);
+	};
+	
+	// path.resolve([from ...], to)
+	// posix version
+	exports.resolve = function() {
+	  var resolvedPath = '',
+	      resolvedAbsolute = false;
+	
+	  for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
+	    var path = (i >= 0) ? arguments[i] : process.cwd();
+	
+	    // Skip empty and invalid entries
+	    if (typeof path !== 'string') {
+	      throw new TypeError('Arguments to path.resolve must be strings');
+	    } else if (!path) {
+	      continue;
+	    }
+	
+	    resolvedPath = path + '/' + resolvedPath;
+	    resolvedAbsolute = path.charAt(0) === '/';
+	  }
+	
+	  // At this point the path should be resolved to a full absolute path, but
+	  // handle relative paths to be safe (might happen when process.cwd() fails)
+	
+	  // Normalize the path
+	  resolvedPath = normalizeArray(filter(resolvedPath.split('/'), function(p) {
+	    return !!p;
+	  }), !resolvedAbsolute).join('/');
+	
+	  return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
+	};
+	
+	// path.normalize(path)
+	// posix version
+	exports.normalize = function(path) {
+	  var isAbsolute = exports.isAbsolute(path),
+	      trailingSlash = substr(path, -1) === '/';
+	
+	  // Normalize the path
+	  path = normalizeArray(filter(path.split('/'), function(p) {
+	    return !!p;
+	  }), !isAbsolute).join('/');
+	
+	  if (!path && !isAbsolute) {
+	    path = '.';
+	  }
+	  if (path && trailingSlash) {
+	    path += '/';
+	  }
+	
+	  return (isAbsolute ? '/' : '') + path;
+	};
+	
+	// posix version
+	exports.isAbsolute = function(path) {
+	  return path.charAt(0) === '/';
+	};
+	
+	// posix version
+	exports.join = function() {
+	  var paths = Array.prototype.slice.call(arguments, 0);
+	  return exports.normalize(filter(paths, function(p, index) {
+	    if (typeof p !== 'string') {
+	      throw new TypeError('Arguments to path.join must be strings');
+	    }
+	    return p;
+	  }).join('/'));
+	};
+	
+	
+	// path.relative(from, to)
+	// posix version
+	exports.relative = function(from, to) {
+	  from = exports.resolve(from).substr(1);
+	  to = exports.resolve(to).substr(1);
+	
+	  function trim(arr) {
+	    var start = 0;
+	    for (; start < arr.length; start++) {
+	      if (arr[start] !== '') break;
+	    }
+	
+	    var end = arr.length - 1;
+	    for (; end >= 0; end--) {
+	      if (arr[end] !== '') break;
+	    }
+	
+	    if (start > end) return [];
+	    return arr.slice(start, end - start + 1);
+	  }
+	
+	  var fromParts = trim(from.split('/'));
+	  var toParts = trim(to.split('/'));
+	
+	  var length = Math.min(fromParts.length, toParts.length);
+	  var samePartsLength = length;
+	  for (var i = 0; i < length; i++) {
+	    if (fromParts[i] !== toParts[i]) {
+	      samePartsLength = i;
+	      break;
+	    }
+	  }
+	
+	  var outputParts = [];
+	  for (var i = samePartsLength; i < fromParts.length; i++) {
+	    outputParts.push('..');
+	  }
+	
+	  outputParts = outputParts.concat(toParts.slice(samePartsLength));
+	
+	  return outputParts.join('/');
+	};
+	
+	exports.sep = '/';
+	exports.delimiter = ':';
+	
+	exports.dirname = function(path) {
+	  var result = splitPath(path),
+	      root = result[0],
+	      dir = result[1];
+	
+	  if (!root && !dir) {
+	    // No dirname whatsoever
+	    return '.';
+	  }
+	
+	  if (dir) {
+	    // It has a dirname, strip trailing slash
+	    dir = dir.substr(0, dir.length - 1);
+	  }
+	
+	  return root + dir;
+	};
+	
+	
+	exports.basename = function(path, ext) {
+	  var f = splitPath(path)[2];
+	  // TODO: make this comparison case-insensitive on windows?
+	  if (ext && f.substr(-1 * ext.length) === ext) {
+	    f = f.substr(0, f.length - ext.length);
+	  }
+	  return f;
+	};
+	
+	
+	exports.extname = function(path) {
+	  return splitPath(path)[3];
+	};
+	
+	function filter (xs, f) {
+	    if (xs.filter) return xs.filter(f);
+	    var res = [];
+	    for (var i = 0; i < xs.length; i++) {
+	        if (f(xs[i], i, xs)) res.push(xs[i]);
+	    }
+	    return res;
+	}
+	
+	// String.prototype.substr - negative index don't work in IE8
+	var substr = 'ab'.substr(-1) === 'b'
+	    ? function (str, start, len) { return str.substr(start, len) }
+	    : function (str, start, len) {
+	        if (start < 0) start = str.length + start;
+	        return str.substr(start, len);
+	    }
+	;
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
+
+/***/ },
+/* 22 */
+/***/ function(module, exports) {
+
+
+
+/***/ },
+/* 23 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var http = __webpack_require__(24);
+	function retrieveRemoteFile(url, cb) {
+	    if (typeof cb !== 'function') {
+	        throw new Error('Provided callback is not a function.');
+	    }
+	    return http.get(url, function (response) {
+	        var body = '';
+	        response.on('data', function (d) {
+	            body += d;
+	        });
+	        response.on('end', function () {
+	            cb(body);
+	        });
+	    });
+	}
+	exports.retrieveRemoteFile = retrieveRemoteFile;
+
+
+/***/ },
 /* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Stream = __webpack_require__(25);
-	var Response = __webpack_require__(45);
-	var Base64 = __webpack_require__(46);
-	var inherits = __webpack_require__(26);
+	var http = module.exports;
+	var EventEmitter = __webpack_require__(25).EventEmitter;
+	var Request = __webpack_require__(26);
+	var url = __webpack_require__(49)
+	
+	http.request = function (params, cb) {
+	    if (typeof params === 'string') {
+	        params = url.parse(params)
+	    }
+	    if (!params) params = {};
+	    if (!params.host && !params.port) {
+	        params.port = parseInt(window.location.port, 10);
+	    }
+	    if (!params.host && params.hostname) {
+	        params.host = params.hostname;
+	    }
+	
+	    if (!params.protocol) {
+	        if (params.scheme) {
+	            params.protocol = params.scheme + ':';
+	        } else {
+	            params.protocol = window.location.protocol;
+	        }
+	    }
+	
+	    if (!params.host) {
+	        params.host = window.location.hostname || window.location.host;
+	    }
+	    if (/:/.test(params.host)) {
+	        if (!params.port) {
+	            params.port = params.host.split(':')[1];
+	        }
+	        params.host = params.host.split(':')[0];
+	    }
+	    if (!params.port) params.port = params.protocol == 'https:' ? 443 : 80;
+	    
+	    var req = new Request(new xhrHttp, params);
+	    if (cb) req.on('response', cb);
+	    return req;
+	};
+	
+	http.get = function (params, cb) {
+	    params.method = 'GET';
+	    var req = http.request(params, cb);
+	    req.end();
+	    return req;
+	};
+	
+	http.Agent = function () {};
+	http.Agent.defaultMaxSockets = 4;
+	
+	var xhrHttp = (function () {
+	    if (typeof window === 'undefined') {
+	        throw new Error('no window object present');
+	    }
+	    else if (window.XMLHttpRequest) {
+	        return window.XMLHttpRequest;
+	    }
+	    else if (window.ActiveXObject) {
+	        var axs = [
+	            'Msxml2.XMLHTTP.6.0',
+	            'Msxml2.XMLHTTP.3.0',
+	            'Microsoft.XMLHTTP'
+	        ];
+	        for (var i = 0; i < axs.length; i++) {
+	            try {
+	                var ax = new(window.ActiveXObject)(axs[i]);
+	                return function () {
+	                    if (ax) {
+	                        var ax_ = ax;
+	                        ax = null;
+	                        return ax_;
+	                    }
+	                    else {
+	                        return new(window.ActiveXObject)(axs[i]);
+	                    }
+	                };
+	            }
+	            catch (e) {}
+	        }
+	        throw new Error('ajax not supported in this browser')
+	    }
+	    else {
+	        throw new Error('ajax not supported in this browser');
+	    }
+	})();
+	
+	http.STATUS_CODES = {
+	    100 : 'Continue',
+	    101 : 'Switching Protocols',
+	    102 : 'Processing',                 // RFC 2518, obsoleted by RFC 4918
+	    200 : 'OK',
+	    201 : 'Created',
+	    202 : 'Accepted',
+	    203 : 'Non-Authoritative Information',
+	    204 : 'No Content',
+	    205 : 'Reset Content',
+	    206 : 'Partial Content',
+	    207 : 'Multi-Status',               // RFC 4918
+	    300 : 'Multiple Choices',
+	    301 : 'Moved Permanently',
+	    302 : 'Moved Temporarily',
+	    303 : 'See Other',
+	    304 : 'Not Modified',
+	    305 : 'Use Proxy',
+	    307 : 'Temporary Redirect',
+	    400 : 'Bad Request',
+	    401 : 'Unauthorized',
+	    402 : 'Payment Required',
+	    403 : 'Forbidden',
+	    404 : 'Not Found',
+	    405 : 'Method Not Allowed',
+	    406 : 'Not Acceptable',
+	    407 : 'Proxy Authentication Required',
+	    408 : 'Request Time-out',
+	    409 : 'Conflict',
+	    410 : 'Gone',
+	    411 : 'Length Required',
+	    412 : 'Precondition Failed',
+	    413 : 'Request Entity Too Large',
+	    414 : 'Request-URI Too Large',
+	    415 : 'Unsupported Media Type',
+	    416 : 'Requested Range Not Satisfiable',
+	    417 : 'Expectation Failed',
+	    418 : 'I\'m a teapot',              // RFC 2324
+	    422 : 'Unprocessable Entity',       // RFC 4918
+	    423 : 'Locked',                     // RFC 4918
+	    424 : 'Failed Dependency',          // RFC 4918
+	    425 : 'Unordered Collection',       // RFC 4918
+	    426 : 'Upgrade Required',           // RFC 2817
+	    428 : 'Precondition Required',      // RFC 6585
+	    429 : 'Too Many Requests',          // RFC 6585
+	    431 : 'Request Header Fields Too Large',// RFC 6585
+	    500 : 'Internal Server Error',
+	    501 : 'Not Implemented',
+	    502 : 'Bad Gateway',
+	    503 : 'Service Unavailable',
+	    504 : 'Gateway Time-out',
+	    505 : 'HTTP Version Not Supported',
+	    506 : 'Variant Also Negotiates',    // RFC 2295
+	    507 : 'Insufficient Storage',       // RFC 4918
+	    509 : 'Bandwidth Limit Exceeded',
+	    510 : 'Not Extended',               // RFC 2774
+	    511 : 'Network Authentication Required' // RFC 6585
+	};
+
+/***/ },
+/* 25 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(console) {// Copyright Joyent, Inc. and other Node contributors.
+	//
+	// Permission is hereby granted, free of charge, to any person obtaining a
+	// copy of this software and associated documentation files (the
+	// "Software"), to deal in the Software without restriction, including
+	// without limitation the rights to use, copy, modify, merge, publish,
+	// distribute, sublicense, and/or sell copies of the Software, and to permit
+	// persons to whom the Software is furnished to do so, subject to the
+	// following conditions:
+	//
+	// The above copyright notice and this permission notice shall be included
+	// in all copies or substantial portions of the Software.
+	//
+	// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+	// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+	// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+	// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+	// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+	// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+	// USE OR OTHER DEALINGS IN THE SOFTWARE.
+	
+	function EventEmitter() {
+	  this._events = this._events || {};
+	  this._maxListeners = this._maxListeners || undefined;
+	}
+	module.exports = EventEmitter;
+	
+	// Backwards-compat with node 0.10.x
+	EventEmitter.EventEmitter = EventEmitter;
+	
+	EventEmitter.prototype._events = undefined;
+	EventEmitter.prototype._maxListeners = undefined;
+	
+	// By default EventEmitters will print a warning if more than 10 listeners are
+	// added to it. This is a useful default which helps finding memory leaks.
+	EventEmitter.defaultMaxListeners = 10;
+	
+	// Obviously not all Emitters should be limited to 10. This function allows
+	// that to be increased. Set to zero for unlimited.
+	EventEmitter.prototype.setMaxListeners = function(n) {
+	  if (!isNumber(n) || n < 0 || isNaN(n))
+	    throw TypeError('n must be a positive number');
+	  this._maxListeners = n;
+	  return this;
+	};
+	
+	EventEmitter.prototype.emit = function(type) {
+	  var er, handler, len, args, i, listeners;
+	
+	  if (!this._events)
+	    this._events = {};
+	
+	  // If there is no 'error' event listener then throw.
+	  if (type === 'error') {
+	    if (!this._events.error ||
+	        (isObject(this._events.error) && !this._events.error.length)) {
+	      er = arguments[1];
+	      if (er instanceof Error) {
+	        throw er; // Unhandled 'error' event
+	      } else {
+	        // At least give some kind of context to the user
+	        var err = new Error('Uncaught, unspecified "error" event. (' + er + ')');
+	        err.context = er;
+	        throw err;
+	      }
+	    }
+	  }
+	
+	  handler = this._events[type];
+	
+	  if (isUndefined(handler))
+	    return false;
+	
+	  if (isFunction(handler)) {
+	    switch (arguments.length) {
+	      // fast cases
+	      case 1:
+	        handler.call(this);
+	        break;
+	      case 2:
+	        handler.call(this, arguments[1]);
+	        break;
+	      case 3:
+	        handler.call(this, arguments[1], arguments[2]);
+	        break;
+	      // slower
+	      default:
+	        args = Array.prototype.slice.call(arguments, 1);
+	        handler.apply(this, args);
+	    }
+	  } else if (isObject(handler)) {
+	    args = Array.prototype.slice.call(arguments, 1);
+	    listeners = handler.slice();
+	    len = listeners.length;
+	    for (i = 0; i < len; i++)
+	      listeners[i].apply(this, args);
+	  }
+	
+	  return true;
+	};
+	
+	EventEmitter.prototype.addListener = function(type, listener) {
+	  var m;
+	
+	  if (!isFunction(listener))
+	    throw TypeError('listener must be a function');
+	
+	  if (!this._events)
+	    this._events = {};
+	
+	  // To avoid recursion in the case that type === "newListener"! Before
+	  // adding it to the listeners, first emit "newListener".
+	  if (this._events.newListener)
+	    this.emit('newListener', type,
+	              isFunction(listener.listener) ?
+	              listener.listener : listener);
+	
+	  if (!this._events[type])
+	    // Optimize the case of one listener. Don't need the extra array object.
+	    this._events[type] = listener;
+	  else if (isObject(this._events[type]))
+	    // If we've already got an array, just append.
+	    this._events[type].push(listener);
+	  else
+	    // Adding the second element, need to change to array.
+	    this._events[type] = [this._events[type], listener];
+	
+	  // Check for listener leak
+	  if (isObject(this._events[type]) && !this._events[type].warned) {
+	    if (!isUndefined(this._maxListeners)) {
+	      m = this._maxListeners;
+	    } else {
+	      m = EventEmitter.defaultMaxListeners;
+	    }
+	
+	    if (m && m > 0 && this._events[type].length > m) {
+	      this._events[type].warned = true;
+	      console.error('(node) warning: possible EventEmitter memory ' +
+	                    'leak detected. %d listeners added. ' +
+	                    'Use emitter.setMaxListeners() to increase limit.',
+	                    this._events[type].length);
+	      if (typeof console.trace === 'function') {
+	        // not supported in IE 10
+	        console.trace();
+	      }
+	    }
+	  }
+	
+	  return this;
+	};
+	
+	EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+	
+	EventEmitter.prototype.once = function(type, listener) {
+	  if (!isFunction(listener))
+	    throw TypeError('listener must be a function');
+	
+	  var fired = false;
+	
+	  function g() {
+	    this.removeListener(type, g);
+	
+	    if (!fired) {
+	      fired = true;
+	      listener.apply(this, arguments);
+	    }
+	  }
+	
+	  g.listener = listener;
+	  this.on(type, g);
+	
+	  return this;
+	};
+	
+	// emits a 'removeListener' event iff the listener was removed
+	EventEmitter.prototype.removeListener = function(type, listener) {
+	  var list, position, length, i;
+	
+	  if (!isFunction(listener))
+	    throw TypeError('listener must be a function');
+	
+	  if (!this._events || !this._events[type])
+	    return this;
+	
+	  list = this._events[type];
+	  length = list.length;
+	  position = -1;
+	
+	  if (list === listener ||
+	      (isFunction(list.listener) && list.listener === listener)) {
+	    delete this._events[type];
+	    if (this._events.removeListener)
+	      this.emit('removeListener', type, listener);
+	
+	  } else if (isObject(list)) {
+	    for (i = length; i-- > 0;) {
+	      if (list[i] === listener ||
+	          (list[i].listener && list[i].listener === listener)) {
+	        position = i;
+	        break;
+	      }
+	    }
+	
+	    if (position < 0)
+	      return this;
+	
+	    if (list.length === 1) {
+	      list.length = 0;
+	      delete this._events[type];
+	    } else {
+	      list.splice(position, 1);
+	    }
+	
+	    if (this._events.removeListener)
+	      this.emit('removeListener', type, listener);
+	  }
+	
+	  return this;
+	};
+	
+	EventEmitter.prototype.removeAllListeners = function(type) {
+	  var key, listeners;
+	
+	  if (!this._events)
+	    return this;
+	
+	  // not listening for removeListener, no need to emit
+	  if (!this._events.removeListener) {
+	    if (arguments.length === 0)
+	      this._events = {};
+	    else if (this._events[type])
+	      delete this._events[type];
+	    return this;
+	  }
+	
+	  // emit removeListener for all listeners on all events
+	  if (arguments.length === 0) {
+	    for (key in this._events) {
+	      if (key === 'removeListener') continue;
+	      this.removeAllListeners(key);
+	    }
+	    this.removeAllListeners('removeListener');
+	    this._events = {};
+	    return this;
+	  }
+	
+	  listeners = this._events[type];
+	
+	  if (isFunction(listeners)) {
+	    this.removeListener(type, listeners);
+	  } else if (listeners) {
+	    // LIFO order
+	    while (listeners.length)
+	      this.removeListener(type, listeners[listeners.length - 1]);
+	  }
+	  delete this._events[type];
+	
+	  return this;
+	};
+	
+	EventEmitter.prototype.listeners = function(type) {
+	  var ret;
+	  if (!this._events || !this._events[type])
+	    ret = [];
+	  else if (isFunction(this._events[type]))
+	    ret = [this._events[type]];
+	  else
+	    ret = this._events[type].slice();
+	  return ret;
+	};
+	
+	EventEmitter.prototype.listenerCount = function(type) {
+	  if (this._events) {
+	    var evlistener = this._events[type];
+	
+	    if (isFunction(evlistener))
+	      return 1;
+	    else if (evlistener)
+	      return evlistener.length;
+	  }
+	  return 0;
+	};
+	
+	EventEmitter.listenerCount = function(emitter, type) {
+	  return emitter.listenerCount(type);
+	};
+	
+	function isFunction(arg) {
+	  return typeof arg === 'function';
+	}
+	
+	function isNumber(arg) {
+	  return typeof arg === 'number';
+	}
+	
+	function isObject(arg) {
+	  return typeof arg === 'object' && arg !== null;
+	}
+	
+	function isUndefined(arg) {
+	  return arg === void 0;
+	}
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(12)))
+
+/***/ },
+/* 26 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Stream = __webpack_require__(27);
+	var Response = __webpack_require__(47);
+	var Base64 = __webpack_require__(48);
+	var inherits = __webpack_require__(28);
 	
 	var Request = module.exports = function (xhr, params) {
 	    var self = this;
@@ -3500,7 +3557,7 @@
 
 
 /***/ },
-/* 25 */
+/* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -3526,15 +3583,15 @@
 	
 	module.exports = Stream;
 	
-	var EE = __webpack_require__(17).EventEmitter;
-	var inherits = __webpack_require__(26);
+	var EE = __webpack_require__(25).EventEmitter;
+	var inherits = __webpack_require__(28);
 	
 	inherits(Stream, EE);
-	Stream.Readable = __webpack_require__(27);
-	Stream.Writable = __webpack_require__(41);
-	Stream.Duplex = __webpack_require__(42);
-	Stream.Transform = __webpack_require__(43);
-	Stream.PassThrough = __webpack_require__(44);
+	Stream.Readable = __webpack_require__(29);
+	Stream.Writable = __webpack_require__(43);
+	Stream.Duplex = __webpack_require__(44);
+	Stream.Transform = __webpack_require__(45);
+	Stream.PassThrough = __webpack_require__(46);
 	
 	// Backwards-compat with node 0.4.x
 	Stream.Stream = Stream;
@@ -3633,7 +3690,7 @@
 
 
 /***/ },
-/* 26 */
+/* 28 */
 /***/ function(module, exports) {
 
 	if (typeof Object.create === 'function') {
@@ -3662,24 +3719,24 @@
 
 
 /***/ },
-/* 27 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(process) {exports = module.exports = __webpack_require__(28);
-	exports.Stream = __webpack_require__(25);
+	/* WEBPACK VAR INJECTION */(function(process) {exports = module.exports = __webpack_require__(30);
+	exports.Stream = __webpack_require__(27);
 	exports.Readable = exports;
-	exports.Writable = __webpack_require__(37);
-	exports.Duplex = __webpack_require__(36);
-	exports.Transform = __webpack_require__(39);
-	exports.PassThrough = __webpack_require__(40);
+	exports.Writable = __webpack_require__(39);
+	exports.Duplex = __webpack_require__(38);
+	exports.Transform = __webpack_require__(41);
+	exports.PassThrough = __webpack_require__(42);
 	if (!process.browser && process.env.READABLE_STREAM === 'disable') {
-	  module.exports = __webpack_require__(25);
+	  module.exports = __webpack_require__(27);
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
 
 /***/ },
-/* 28 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {// Copyright Joyent, Inc. and other Node contributors.
@@ -3706,17 +3763,17 @@
 	module.exports = Readable;
 	
 	/*<replacement>*/
-	var isArray = __webpack_require__(29);
+	var isArray = __webpack_require__(31);
 	/*</replacement>*/
 	
 	
 	/*<replacement>*/
-	var Buffer = __webpack_require__(30).Buffer;
+	var Buffer = __webpack_require__(32).Buffer;
 	/*</replacement>*/
 	
 	Readable.ReadableState = ReadableState;
 	
-	var EE = __webpack_require__(17).EventEmitter;
+	var EE = __webpack_require__(25).EventEmitter;
 	
 	/*<replacement>*/
 	if (!EE.listenerCount) EE.listenerCount = function(emitter, type) {
@@ -3724,18 +3781,18 @@
 	};
 	/*</replacement>*/
 	
-	var Stream = __webpack_require__(25);
+	var Stream = __webpack_require__(27);
 	
 	/*<replacement>*/
-	var util = __webpack_require__(34);
-	util.inherits = __webpack_require__(26);
+	var util = __webpack_require__(36);
+	util.inherits = __webpack_require__(28);
 	/*</replacement>*/
 	
 	var StringDecoder;
 	
 	
 	/*<replacement>*/
-	var debug = __webpack_require__(35);
+	var debug = __webpack_require__(37);
 	if (debug && debug.debuglog) {
 	  debug = debug.debuglog('stream');
 	} else {
@@ -3747,7 +3804,7 @@
 	util.inherits(Readable, Stream);
 	
 	function ReadableState(options, stream) {
-	  var Duplex = __webpack_require__(36);
+	  var Duplex = __webpack_require__(38);
 	
 	  options = options || {};
 	
@@ -3808,14 +3865,14 @@
 	  this.encoding = null;
 	  if (options.encoding) {
 	    if (!StringDecoder)
-	      StringDecoder = __webpack_require__(38).StringDecoder;
+	      StringDecoder = __webpack_require__(40).StringDecoder;
 	    this.decoder = new StringDecoder(options.encoding);
 	    this.encoding = options.encoding;
 	  }
 	}
 	
 	function Readable(options) {
-	  var Duplex = __webpack_require__(36);
+	  var Duplex = __webpack_require__(38);
 	
 	  if (!(this instanceof Readable))
 	    return new Readable(options);
@@ -3918,7 +3975,7 @@
 	// backwards compatibility.
 	Readable.prototype.setEncoding = function(enc) {
 	  if (!StringDecoder)
-	    StringDecoder = __webpack_require__(38).StringDecoder;
+	    StringDecoder = __webpack_require__(40).StringDecoder;
 	  this._readableState.decoder = new StringDecoder(enc);
 	  this._readableState.encoding = enc;
 	  return this;
@@ -4634,10 +4691,10 @@
 	  return -1;
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
 
 /***/ },
-/* 29 */
+/* 31 */
 /***/ function(module, exports) {
 
 	module.exports = Array.isArray || function (arr) {
@@ -4646,7 +4703,7 @@
 
 
 /***/ },
-/* 30 */
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer, global) {/*!
@@ -4659,9 +4716,9 @@
 	
 	'use strict'
 	
-	var base64 = __webpack_require__(31)
-	var ieee754 = __webpack_require__(32)
-	var isArray = __webpack_require__(33)
+	var base64 = __webpack_require__(33)
+	var ieee754 = __webpack_require__(34)
+	var isArray = __webpack_require__(35)
 	
 	exports.Buffer = Buffer
 	exports.SlowBuffer = SlowBuffer
@@ -6439,10 +6496,10 @@
 	  return val !== val // eslint-disable-line no-self-compare
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30).Buffer, (function() { return this; }())))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(32).Buffer, (function() { return this; }())))
 
 /***/ },
-/* 31 */
+/* 33 */
 /***/ function(module, exports) {
 
 	'use strict'
@@ -6562,7 +6619,7 @@
 
 
 /***/ },
-/* 32 */
+/* 34 */
 /***/ function(module, exports) {
 
 	exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -6652,7 +6709,7 @@
 
 
 /***/ },
-/* 33 */
+/* 35 */
 /***/ function(module, exports) {
 
 	var toString = {}.toString;
@@ -6663,7 +6720,7 @@
 
 
 /***/ },
-/* 34 */
+/* 36 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(Buffer) {// Copyright Joyent, Inc. and other Node contributors.
@@ -6774,16 +6831,16 @@
 	  return Object.prototype.toString.call(o);
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30).Buffer))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(32).Buffer))
 
 /***/ },
-/* 35 */
+/* 37 */
 /***/ function(module, exports) {
 
 	/* (ignored) */
 
 /***/ },
-/* 36 */
+/* 38 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {// Copyright Joyent, Inc. and other Node contributors.
@@ -6824,12 +6881,12 @@
 	
 	
 	/*<replacement>*/
-	var util = __webpack_require__(34);
-	util.inherits = __webpack_require__(26);
+	var util = __webpack_require__(36);
+	util.inherits = __webpack_require__(28);
 	/*</replacement>*/
 	
-	var Readable = __webpack_require__(28);
-	var Writable = __webpack_require__(37);
+	var Readable = __webpack_require__(30);
+	var Writable = __webpack_require__(39);
 	
 	util.inherits(Duplex, Readable);
 	
@@ -6876,10 +6933,10 @@
 	  }
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
 
 /***/ },
-/* 37 */
+/* 39 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {// Copyright Joyent, Inc. and other Node contributors.
@@ -6910,18 +6967,18 @@
 	module.exports = Writable;
 	
 	/*<replacement>*/
-	var Buffer = __webpack_require__(30).Buffer;
+	var Buffer = __webpack_require__(32).Buffer;
 	/*</replacement>*/
 	
 	Writable.WritableState = WritableState;
 	
 	
 	/*<replacement>*/
-	var util = __webpack_require__(34);
-	util.inherits = __webpack_require__(26);
+	var util = __webpack_require__(36);
+	util.inherits = __webpack_require__(28);
 	/*</replacement>*/
 	
-	var Stream = __webpack_require__(25);
+	var Stream = __webpack_require__(27);
 	
 	util.inherits(Writable, Stream);
 	
@@ -6932,7 +6989,7 @@
 	}
 	
 	function WritableState(options, stream) {
-	  var Duplex = __webpack_require__(36);
+	  var Duplex = __webpack_require__(38);
 	
 	  options = options || {};
 	
@@ -7020,7 +7077,7 @@
 	}
 	
 	function Writable(options) {
-	  var Duplex = __webpack_require__(36);
+	  var Duplex = __webpack_require__(38);
 	
 	  // Writable ctor is applied to Duplexes, though they're not
 	  // instanceof Writable, they're instanceof Readable.
@@ -7360,10 +7417,10 @@
 	  state.ended = true;
 	}
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
 
 /***/ },
-/* 38 */
+/* 40 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -7387,7 +7444,7 @@
 	// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 	// USE OR OTHER DEALINGS IN THE SOFTWARE.
 	
-	var Buffer = __webpack_require__(30).Buffer;
+	var Buffer = __webpack_require__(32).Buffer;
 	
 	var isBufferEncoding = Buffer.isEncoding
 	  || function(encoding) {
@@ -7590,7 +7647,7 @@
 
 
 /***/ },
-/* 39 */
+/* 41 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -7659,11 +7716,11 @@
 	
 	module.exports = Transform;
 	
-	var Duplex = __webpack_require__(36);
+	var Duplex = __webpack_require__(38);
 	
 	/*<replacement>*/
-	var util = __webpack_require__(34);
-	util.inherits = __webpack_require__(26);
+	var util = __webpack_require__(36);
+	util.inherits = __webpack_require__(28);
 	/*</replacement>*/
 	
 	util.inherits(Transform, Duplex);
@@ -7805,7 +7862,7 @@
 
 
 /***/ },
-/* 40 */
+/* 42 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -7835,11 +7892,11 @@
 	
 	module.exports = PassThrough;
 	
-	var Transform = __webpack_require__(39);
+	var Transform = __webpack_require__(41);
 	
 	/*<replacement>*/
-	var util = __webpack_require__(34);
-	util.inherits = __webpack_require__(26);
+	var util = __webpack_require__(36);
+	util.inherits = __webpack_require__(28);
 	/*</replacement>*/
 	
 	util.inherits(PassThrough, Transform);
@@ -7857,20 +7914,6 @@
 
 
 /***/ },
-/* 41 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = __webpack_require__(37)
-
-
-/***/ },
-/* 42 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = __webpack_require__(36)
-
-
-/***/ },
 /* 43 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -7881,15 +7924,29 @@
 /* 44 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(40)
+	module.exports = __webpack_require__(38)
 
 
 /***/ },
 /* 45 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Stream = __webpack_require__(25);
-	var util = __webpack_require__(19);
+	module.exports = __webpack_require__(41)
+
+
+/***/ },
+/* 46 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = __webpack_require__(42)
+
+
+/***/ },
+/* 47 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Stream = __webpack_require__(27);
+	var util = __webpack_require__(13);
 	
 	var Response = module.exports = function (res) {
 	    this.offset = 0;
@@ -8011,7 +8068,7 @@
 
 
 /***/ },
-/* 46 */
+/* 48 */
 /***/ function(module, exports, __webpack_require__) {
 
 	;(function () {
@@ -8077,7 +8134,7 @@
 
 
 /***/ },
-/* 47 */
+/* 49 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -8101,7 +8158,7 @@
 	// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 	// USE OR OTHER DEALINGS IN THE SOFTWARE.
 	
-	var punycode = __webpack_require__(48);
+	var punycode = __webpack_require__(50);
 	
 	exports.parse = urlParse;
 	exports.resolve = urlResolve;
@@ -8173,7 +8230,7 @@
 	      'gopher:': true,
 	      'file:': true
 	    },
-	    querystring = __webpack_require__(50);
+	    querystring = __webpack_require__(52);
 	
 	function urlParse(url, parseQueryString, slashesDenoteHost) {
 	  if (url && isObject(url) && url instanceof Url) return url;
@@ -8790,7 +8847,7 @@
 
 
 /***/ },
-/* 48 */
+/* 50 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module, global) {/*! https://mths.be/punycode v1.3.2 by @mathias */
@@ -9322,10 +9379,10 @@
 	
 	}(this));
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(49)(module), (function() { return this; }())))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(51)(module), (function() { return this; }())))
 
 /***/ },
-/* 49 */
+/* 51 */
 /***/ function(module, exports) {
 
 	module.exports = function(module) {
@@ -9341,17 +9398,17 @@
 
 
 /***/ },
-/* 50 */
+/* 52 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	exports.decode = exports.parse = __webpack_require__(51);
-	exports.encode = exports.stringify = __webpack_require__(52);
+	exports.decode = exports.parse = __webpack_require__(53);
+	exports.encode = exports.stringify = __webpack_require__(54);
 
 
 /***/ },
-/* 51 */
+/* 53 */
 /***/ function(module, exports) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -9437,7 +9494,7 @@
 
 
 /***/ },
-/* 52 */
+/* 54 */
 /***/ function(module, exports) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -9507,13 +9564,13 @@
 
 
 /***/ },
-/* 53 */
+/* 55 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
-	var fs = __webpack_require__(14);
+	var fs = __webpack_require__(22);
 	var $G = __webpack_require__(10);
-	var $R = __webpack_require__(15);
+	var $R = __webpack_require__(23);
 	var DEFAULT_WEIGHT = 1;
 	var JSONInput = (function () {
 	    function JSONInput(_explicit_direction, _direction, _weighted_mode) {
@@ -9597,11 +9654,11 @@
 
 
 /***/ },
-/* 54 */
+/* 56 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
-	var fs = __webpack_require__(14);
+	var fs = __webpack_require__(22);
 	var CSVOutput = (function () {
 	    function CSVOutput(_separator, _explicit_direction, _direction_mode) {
 	        if (_separator === void 0) { _separator = ','; }
@@ -9647,12 +9704,12 @@
 
 
 /***/ },
-/* 55 */
+/* 57 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 	var $G = __webpack_require__(10);
-	var $CB = __webpack_require__(56);
+	var $CB = __webpack_require__(58);
 	function BFS(graph, v, config) {
 	    var config = config || prepareBFSStandardConfig(), callbacks = config.callbacks, dir_mode = config.dir_mode;
 	    if (graph.getMode() === $G.GraphMode.INIT) {
@@ -9758,7 +9815,7 @@
 
 
 /***/ },
-/* 56 */
+/* 58 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -9776,12 +9833,12 @@
 
 
 /***/ },
-/* 57 */
+/* 59 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 	var $G = __webpack_require__(10);
-	var $CB = __webpack_require__(56);
+	var $CB = __webpack_require__(58);
 	function DFSVisit(graph, current_root, config) {
 	    var dfsVisitScope = {
 	        stack: [],
@@ -9939,14 +9996,14 @@
 
 
 /***/ },
-/* 58 */
+/* 60 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(console) {"use strict";
 	var $E = __webpack_require__(7);
 	var $G = __webpack_require__(10);
-	var $CB = __webpack_require__(56);
-	var $BH = __webpack_require__(59);
+	var $CB = __webpack_require__(58);
+	var $BH = __webpack_require__(61);
 	function PFS(graph, v, config) {
 	    var config = config || preparePFSStandardConfig(), callbacks = config.callbacks, dir_mode = config.dir_mode, evalPriority = config.evalPriority, evalObjID = config.evalObjID;
 	    if (graph.getMode() === $G.GraphMode.INIT) {
@@ -10089,10 +10146,10 @@
 	}
 	exports.preparePFSStandardConfig = preparePFSStandardConfig;
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(18)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(12)))
 
 /***/ },
-/* 59 */
+/* 61 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(console) {"use strict";
@@ -10334,7 +10391,358 @@
 	}());
 	exports.BinaryHeap = BinaryHeap;
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(18)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(12)))
+
+/***/ },
+/* 62 */
+/***/ function(module, exports) {
+
+	"use strict";
+	function randBase36String() {
+	    return (Math.random() + 1).toString(36).substr(2, 24);
+	}
+	exports.randBase36String = randBase36String;
+	function runif(min, max, discrete) {
+	    if (min === undefined) {
+	        min = 0;
+	    }
+	    if (max === undefined) {
+	        max = 1;
+	    }
+	    if (discrete === undefined) {
+	        discrete = false;
+	    }
+	    if (discrete) {
+	        return Math.floor(runif(min, max, false));
+	    }
+	    return Math.random() * (max - min) + min;
+	}
+	exports.runif = runif;
+	function rnorm(mean, stdev) {
+	    this.v2 = null;
+	    var u1, u2, v1, v2, s;
+	    if (mean === undefined) {
+	        mean = 0.0;
+	    }
+	    if (stdev === undefined) {
+	        stdev = 1.0;
+	    }
+	    if (this.v2 === null) {
+	        do {
+	            u1 = Math.random();
+	            u2 = Math.random();
+	            v1 = 2 * u1 - 1;
+	            v2 = 2 * u2 - 1;
+	            s = v1 * v1 + v2 * v2;
+	        } while (s === 0 || s >= 1);
+	        this.v2 = v2 * Math.sqrt(-2 * Math.log(s) / s);
+	        return stdev * v1 * Math.sqrt(-2 * Math.log(s) / s) + mean;
+	    }
+	    v2 = this.v2;
+	    this.v2 = null;
+	    return stdev * v2 + mean;
+	}
+	exports.rnorm = rnorm;
+	function rchisq(degreesOfFreedom) {
+	    if (degreesOfFreedom === undefined) {
+	        degreesOfFreedom = 1;
+	    }
+	    var i, z, sum = 0.0;
+	    for (i = 0; i < degreesOfFreedom; i++) {
+	        z = rnorm();
+	        sum += z * z;
+	    }
+	    return sum;
+	}
+	exports.rchisq = rchisq;
+	function rpoisson(lambda) {
+	    if (lambda === undefined) {
+	        lambda = 1;
+	    }
+	    var l = Math.exp(-lambda), k = 0, p = 1.0;
+	    do {
+	        k++;
+	        p *= Math.random();
+	    } while (p > l);
+	    return k - 1;
+	}
+	exports.rpoisson = rpoisson;
+	function rcauchy(loc, scale) {
+	    if (loc === undefined) {
+	        loc = 0.0;
+	    }
+	    if (scale === undefined) {
+	        scale = 1.0;
+	    }
+	    var n2, n1 = rnorm();
+	    do {
+	        n2 = rnorm();
+	    } while (n2 === 0.0);
+	    return loc + scale * n1 / n2;
+	}
+	exports.rcauchy = rcauchy;
+	function rbernoulli(p) {
+	    return Math.random() < p ? 1 : 0;
+	}
+	exports.rbernoulli = rbernoulli;
+	function vectorize(generator) {
+	    return function () {
+	        var n, result, i, args;
+	        args = [].slice.call(arguments);
+	        n = args.shift();
+	        result = [];
+	        for (i = 0; i < n; i++) {
+	            result.push(generator.apply(this, args));
+	        }
+	        return result;
+	    };
+	}
+	function histogram(data, binCount) {
+	    binCount = binCount || 10;
+	    var bins, i, scaled, max = Math.max.apply(this, data), min = Math.min.apply(this, data);
+	    if (max === min) {
+	        return [data.length];
+	    }
+	    bins = [];
+	    for (i = 0; i < binCount; i++) {
+	        bins.push(0);
+	    }
+	    for (i = 0; i < data.length; i++) {
+	        scaled = (data[i] - min) / (max - min);
+	        scaled *= binCount;
+	        scaled = Math.floor(scaled);
+	        if (scaled === binCount) {
+	            scaled--;
+	        }
+	        bins[scaled]++;
+	    }
+	    return bins;
+	}
+	exports.histogram = histogram;
+	function rlist(list) {
+	    return list[runif(0, list.length, true)];
+	}
+	exports.rlist = rlist;
+	var rvunif = vectorize(runif);
+	exports.rvunif = rvunif;
+	var rvnorm = vectorize(rnorm);
+	exports.rvnorm = rvnorm;
+	var rvchisq = vectorize(rchisq);
+	exports.rvchisq = rvchisq;
+	var rvpoisson = vectorize(rpoisson);
+	exports.rvpoisson = rvpoisson;
+	var rvcauchy = vectorize(rcauchy);
+	exports.rvcauchy = rvcauchy;
+	var rvbernoulli = vectorize(rbernoulli);
+	exports.rvbernoulli = rvbernoulli;
+	var rvlist = vectorize(rlist);
+	exports.rvlist = rvlist;
+
+
+/***/ },
+/* 63 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	var randgen = __webpack_require__(62);
+	var logger_1 = __webpack_require__(11);
+	var logger = new logger_1.Logger();
+	var SimplePerturber = (function () {
+	    function SimplePerturber(_graph) {
+	        this._graph = _graph;
+	    }
+	    SimplePerturber.prototype.randomlyDeleteNodesPercentage = function (percentage) {
+	        if (percentage > 100) {
+	            percentage = 100;
+	        }
+	        var nr_nodes_to_delete = Math.ceil(this._graph.nrNodes() * percentage / 100);
+	        this.randomlyDeleteNodesAmount(nr_nodes_to_delete);
+	    };
+	    SimplePerturber.prototype.randomlyDeleteUndEdgesPercentage = function (percentage) {
+	        if (percentage > 100) {
+	            percentage = 100;
+	        }
+	        var nr_edges_to_delete = Math.ceil(this._graph.nrUndEdges() * percentage / 100);
+	        this.randomlyDeleteUndEdgesAmount(nr_edges_to_delete);
+	    };
+	    SimplePerturber.prototype.randomlyDeleteDirEdgesPercentage = function (percentage) {
+	        if (percentage > 100) {
+	            percentage = 100;
+	        }
+	        var nr_edges_to_delete = Math.ceil(this._graph.nrDirEdges() * percentage / 100);
+	        this.randomlyDeleteDirEdgesAmount(nr_edges_to_delete);
+	    };
+	    SimplePerturber.prototype.randomlyDeleteNodesAmount = function (amount) {
+	        if (amount < 0) {
+	            throw 'Cowardly refusing to remove a negative amount of nodes';
+	        }
+	        if (this._graph.nrNodes() === 0) {
+	            return;
+	        }
+	        for (var nodeID = 0, randomNodes = this._graph.pickRandomProperties(this._graph._nodes, amount); nodeID < randomNodes.length; nodeID++) {
+	            this._graph.deleteNode(this._graph._nodes[randomNodes[nodeID]]);
+	        }
+	    };
+	    SimplePerturber.prototype.randomlyDeleteUndEdgesAmount = function (amount) {
+	        if (amount < 0) {
+	            throw 'Cowardly refusing to remove a negative amount of edges';
+	        }
+	        if (this._graph.nrUndEdges() === 0) {
+	            return;
+	        }
+	        for (var edgeID = 0, randomEdges = this._graph.pickRandomProperties(this._graph._und_edges, amount); edgeID < randomEdges.length; edgeID++) {
+	            this._graph.deleteEdge(this._graph._und_edges[randomEdges[edgeID]]);
+	        }
+	    };
+	    SimplePerturber.prototype.randomlyDeleteDirEdgesAmount = function (amount) {
+	        if (amount < 0) {
+	            throw 'Cowardly refusing to remove a negative amount of edges';
+	        }
+	        if (this._graph.nrDirEdges() === 0) {
+	            return;
+	        }
+	        for (var edgeID = 0, randomEdges = this._graph.pickRandomProperties(this._graph._dir_edges, amount); edgeID < randomEdges.length; edgeID++) {
+	            this._graph.deleteEdge(this._graph._dir_edges[randomEdges[edgeID]]);
+	        }
+	    };
+	    SimplePerturber.prototype.randomlyAddUndEdgesPercentage = function (percentage) {
+	        var nr_und_edges_to_add = Math.ceil(this._graph.nrUndEdges() * percentage / 100);
+	        this.randomlyAddEdgesAmount(nr_und_edges_to_add, { directed: false });
+	    };
+	    SimplePerturber.prototype.randomlyAddDirEdgesPercentage = function (percentage) {
+	        var nr_dir_edges_to_add = Math.ceil(this._graph.nrDirEdges() * percentage / 100);
+	        this.randomlyAddEdgesAmount(nr_dir_edges_to_add, { directed: true });
+	    };
+	    SimplePerturber.prototype.randomlyAddEdgesAmount = function (amount, config) {
+	        if (amount <= 0) {
+	            throw new Error('Cowardly refusing to add a non-positive amount of edges');
+	        }
+	        var node_a, node_b, nodes;
+	        var direction = (config && config.directed) ? config.directed : false, dir = direction ? "_d" : "_u";
+	        while (amount) {
+	            node_a = this._graph.getRandomNode();
+	            while ((node_b = this._graph.getRandomNode()) === node_a) { }
+	            var edge_id = node_a.getID() + "_" + node_b.getID() + dir;
+	            if (node_a.hasEdgeID(edge_id)) {
+	                logger.log("Duplicate edge creation, continuing...");
+	                continue;
+	            }
+	            else {
+	                this._graph.addEdge(edge_id, node_a, node_b, { directed: direction });
+	                --amount;
+	            }
+	        }
+	        logger.log("Created " + amount + " " + (direction ? "directed" : "undirected") + " edges...");
+	    };
+	    SimplePerturber.prototype.randomlyAddNodesPercentage = function (percentage, config) {
+	        var nr_nodes_to_add = Math.ceil(this._graph.nrNodes() * percentage / 100);
+	        this.randomlyAddNodesAmount(nr_nodes_to_add, config);
+	    };
+	    SimplePerturber.prototype.randomlyAddNodesAmount = function (amount, config) {
+	        if (amount < 0) {
+	            throw 'Cowardly refusing to add a negative amount of nodes';
+	        }
+	        var new_nodes = {};
+	        while (amount--) {
+	            var new_node_id = randgen.randBase36String();
+	            new_nodes[new_node_id] = this._graph.addNode(new_node_id);
+	        }
+	        if (config == null) {
+	            return;
+	        }
+	        else {
+	            this.createEdgesByConfig(config, new_nodes);
+	        }
+	    };
+	    SimplePerturber.prototype.createEdgesByConfig = function (config, new_nodes) {
+	        var degree, min_degree, max_degree, deg_probability;
+	        if (config.und_degree != null ||
+	            config.dir_degree != null ||
+	            config.min_und_degree != null && config.max_und_degree != null ||
+	            config.min_dir_degree != null && config.max_dir_degree != null) {
+	            if ((degree = config.und_degree) != null) {
+	                this.createRandomEdgesSpan(degree, degree, false, new_nodes);
+	            }
+	            else if ((min_degree = config.min_und_degree) != null
+	                && (max_degree = config.max_und_degree) != null) {
+	                this.createRandomEdgesSpan(min_degree, max_degree, false, new_nodes);
+	            }
+	            if (degree = config.dir_degree) {
+	                this.createRandomEdgesSpan(degree, degree, true, new_nodes);
+	            }
+	            else if ((min_degree = config.min_dir_degree) != null
+	                && (max_degree = config.max_dir_degree) != null) {
+	                this.createRandomEdgesSpan(min_degree, max_degree, true, new_nodes);
+	            }
+	        }
+	        else {
+	            if (config.probability_dir != null) {
+	                this.createRandomEdgesProb(config.probability_dir, true, new_nodes);
+	            }
+	            if (config.probability_und != null) {
+	                this.createRandomEdgesProb(config.probability_und, false, new_nodes);
+	            }
+	        }
+	    };
+	    SimplePerturber.prototype.createRandomEdgesProb = function (probability, directed, new_nodes) {
+	        if (0 > probability || 1 < probability) {
+	            throw new Error("Probability out of range.");
+	        }
+	        directed = directed || false;
+	        new_nodes = new_nodes || this._graph.getNodes();
+	        var all_nodes = this._graph.getNodes(), node_a, node_b, edge_id, dir = directed ? '_d' : '_u';
+	        for (node_a in new_nodes) {
+	            for (node_b in all_nodes) {
+	                if (node_a !== node_b && Math.random() <= probability) {
+	                    edge_id = all_nodes[node_a].getID() + "_" + all_nodes[node_b].getID() + dir;
+	                    if (this._graph.getNodes()[node_a].hasEdgeID(edge_id)) {
+	                        continue;
+	                    }
+	                    this._graph.addEdge(edge_id, all_nodes[node_a], all_nodes[node_b], { directed: directed });
+	                }
+	            }
+	        }
+	    };
+	    SimplePerturber.prototype.createRandomEdgesSpan = function (min, max, directed, setOfNodes) {
+	        if (min < 0) {
+	            throw new Error('Minimum degree cannot be negative.');
+	        }
+	        if (max >= this._graph.nrNodes()) {
+	            throw new Error('Maximum degree exceeds number of reachable nodes.');
+	        }
+	        if (min > max) {
+	            throw new Error('Minimum degree cannot exceed maximum degree.');
+	        }
+	        directed = directed || false;
+	        var min = min | 0, max = max | 0, new_nodes = setOfNodes || this._graph.getNodes(), all_nodes = this._graph.getNodes(), idx_a, node_a, node_b, edge_id, node_keys = Object.keys(all_nodes), keys_len = node_keys.length, rand_idx, rand_deg, dir = directed ? '_d' : '_u';
+	        for (idx_a in new_nodes) {
+	            node_a = new_nodes[idx_a];
+	            rand_idx = 0;
+	            rand_deg = (Math.random() * (max - min) + min) | 0;
+	            while (rand_deg) {
+	                rand_idx = (keys_len * Math.random()) | 0;
+	                node_b = all_nodes[node_keys[rand_idx]];
+	                if (node_a !== node_b) {
+	                    edge_id = node_a.getID() + "_" + node_b.getID() + dir;
+	                    if (node_a.hasEdgeID(edge_id)) {
+	                        continue;
+	                    }
+	                    this._graph.addEdge(edge_id, node_a, node_b, { directed: directed });
+	                    --rand_deg;
+	                }
+	            }
+	        }
+	    };
+	    return SimplePerturber;
+	}());
+	exports.SimplePerturber = SimplePerturber;
+
+
+/***/ },
+/* 64 */
+/***/ function(module, exports) {
+
+	"use strict";
 
 /***/ }
 /******/ ]);
