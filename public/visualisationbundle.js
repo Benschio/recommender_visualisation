@@ -72,32 +72,35 @@
 	
 	var csvinput = new _graphinius2.default.input.CSVInput(" ", false, false);
 	var csvoutput = new _graphinius2.default.output.CSVOutput(";", false, false);
-	
-	csvinput.readFromEdgeListURL("/data/facebook/0.edges", function (g) {
+	/*
+	csvinput.readFromEdgeListURL("/data/facebook/0.edges", function(g){
 	    window.graph = g;
 	    var e = g.getUndEdges();
-	    var uigraph = _react2.default.createElement(_index2.default, { graph: g });
+	    var uigraph = React.createElement(UIGraph, {graph: g});
 	
 	    var d3graph = {
 	        //nodes: [],
 	        //links: []
 	    };
-	    d3graph.nodes = Object.keys(g.getNodes()).map(function (dat) {
+	    d3graph.nodes =
+	    Object.keys(g.getNodes()).map((dat) => {
 	        var node = g.getNodes()[dat];
-	        return { id: node.getID(), group: 1 };
+	        return {id: node.getID(), group: 1};
 	    });
-	    d3graph.links = Object.keys(e).map(function (dat) {
+	    d3graph.links =
+	    Object.keys(e).map((dat) => {
 	        var edge = g.getUndEdges()[dat];
 	        var edgeNodes = edge.getNodes();
-	        return { source: edgeNodes[0], target: edgeNodes[1], value: 1 };
+	        return {source: edgeNodes.a.getID(), target: edgeNodes.b.getID(), value: 1};
 	    });
-	    alert("a");
-	    //var str = JSON.stringify(d3graph);
-	    //console.log(str);
-	    (0, _simulation2.default)(d3graph);
+	    alert("abc");
+	    var str = JSON.stringify(d3graph);
+	    console.log(str);
+	    GraphVis(d3graph);
 	
 	    //render(uigraph, document.querySelector('#app-main'));
-	});
+	});*/
+	(0, _simulation2.default)("a");
 
 /***/ },
 /* 1 */

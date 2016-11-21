@@ -45,7 +45,7 @@ gulp.task('typescript', ['clean'], function(){
 		.pipe(gulp.dest('.'));
 });
 
-gulp.task('build', ['typescript'], function() {
+gulp.task('build', function() {
 
 	return gulp.src('') // specified in webpack config
 		.pipe(webpack( require('./webpack.config.js' )))
@@ -81,6 +81,7 @@ gulp.task('webpackBrowserSync', ['uglify'], function() {
 
 	gulp.watch(paths.sources, ['uglify']);
 	gulp.watch(paths.styles, ['stylus']);
+	gulp.watch(paths.typescripts, ['typescript']);
 	gulp.watch(paths.public).on('change', browserSync.reload);
 });
 

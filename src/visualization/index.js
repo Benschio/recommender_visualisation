@@ -8,7 +8,7 @@ import GraphVis from './simulation.jsx'
 
 var csvinput = new G.input.CSVInput(" ", false, false);
 var csvoutput = new G.output.CSVOutput(";",false,false);
-
+/*
 csvinput.readFromEdgeListURL("/data/facebook/0.edges", function(g){
     window.graph = g;
     var e = g.getUndEdges();
@@ -27,13 +27,13 @@ csvinput.readFromEdgeListURL("/data/facebook/0.edges", function(g){
     Object.keys(e).map((dat) => {
         var edge = g.getUndEdges()[dat];
         var edgeNodes = edge.getNodes();
-        return {source: edgeNodes[0], target: edgeNodes[1], value: 1};
+        return {source: edgeNodes.a.getID(), target: edgeNodes.b.getID(), value: 1};
     });
-    alert("a");
-    //var str = JSON.stringify(d3graph);
-    //console.log(str);
+    alert("abc");
+    var str = JSON.stringify(d3graph);
+    console.log(str);
     GraphVis(d3graph);
 
     //render(uigraph, document.querySelector('#app-main'));
-});
-
+});*/
+GraphVis("a");
