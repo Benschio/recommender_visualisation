@@ -73,7 +73,7 @@
 	var csvinput = new _graphinius2.default.input.CSVInput(" ", false, false);
 	var csvoutput = new _graphinius2.default.output.CSVOutput(";", false, false);
 	/*
-	csvinput.readFromEdgeListURL("/data/facebook/0.edges", function(g){
+	csvinput.readFromEdgeListURL("/data/facebook/107.edges", function(g){
 	    window.graph = g;
 	    var e = g.getUndEdges();
 	    var uigraph = React.createElement(UIGraph, {graph: g});
@@ -96,7 +96,7 @@
 	    alert("abc");
 	    var str = JSON.stringify(d3graph);
 	    console.log(str);
-	    GraphVis(d3graph);
+	    //GraphVis(d3graph);
 	
 	    //render(uigraph, document.querySelector('#app-main'));
 	});*/
@@ -10829,7 +10829,7 @@
 			return d.id;
 		})).force("charge", d3.forceManyBody()).force("center", d3.forceCenter(width / 2, height / 2));
 	
-		d3.json("graph.json", function (error, graph) {
+		d3.json("graph_large.json", function (error, graph) {
 			if (error) throw error;
 	
 			var link = svg.append("g").attr("class", "links").selectAll("line").data(graph.links).enter().append("line").attr("stroke-width", function (d) {

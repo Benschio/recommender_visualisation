@@ -9,7 +9,7 @@ import GraphVis from './simulation.jsx'
 var csvinput = new G.input.CSVInput(" ", false, false);
 var csvoutput = new G.output.CSVOutput(";",false,false);
 /*
-csvinput.readFromEdgeListURL("/data/facebook/0.edges", function(g){
+csvinput.readFromEdgeListURL("/data/facebook/107.edges", function(g){
     window.graph = g;
     var e = g.getUndEdges();
     var uigraph = React.createElement(UIGraph, {graph: g});
@@ -32,7 +32,7 @@ csvinput.readFromEdgeListURL("/data/facebook/0.edges", function(g){
     alert("abc");
     var str = JSON.stringify(d3graph);
     console.log(str);
-    GraphVis(d3graph);
+    //GraphVis(d3graph);
 
     //render(uigraph, document.querySelector('#app-main'));
 });*/
