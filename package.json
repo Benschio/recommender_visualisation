@@ -45,6 +45,7 @@
   "dependencies": {
     "graphinius": "^0.4.2",
     "react": "^15.2.1",
-    "react-dom": "^15.2.1"
+    "react-dom": "^15.2.1",
+    "react-svg-pan-zoom": "^2.4.1"
   }
 }

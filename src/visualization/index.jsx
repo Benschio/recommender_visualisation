@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from 'react-dom';
-import ControlUI from './controlUI.jsx';
+import {ReactSVGPanZoom} from 'react-svg-pan-zoom';
 
 
 class UINode extends React.Component {
@@ -33,13 +33,37 @@ class UIEdge extends React.Component {
 
 class UIGraph extends React.Component {
 
+    constructor(props, context) {
+        super(props, context);
+        this.Viewer = null;
+    }
+    componentDidMount() {
+        this.Viewer.fitToViewer();
+    }
 	render()
 	{
-		return 	<svg width="10000" height="1000" key="1">
+		return(
+			<div>{/*
+				<button onClick={event => this.Viewer.zoomOnViewerCenter(1.1)}>Zoom in</button>
+				<button onClick={event => this.Viewer.fitSelection(500, 500, 500, 500)}>Zoom area</button>
+				<button onClick={event => this.Viewer.fitToViewer()}>Fit</button>*/}
+
+				<hr/>
+
+				<ReactSVGPanZoom
+					style={{outline: "1px solid black"}}
+					width={1000} height={1000} ref={Viewer => this.Viewer = Viewer}
+					onClick={event => console.log('click', event.x, event.y, event.originalEvent)}
+					onMouseUp={event => console.log('up', event.x, event.y)}
+					onMouseMove={event => console.log('move', event.x, event.y)}
+					onMouseDown={event => console.log('down', event.x, event.y)}>
+
+
+			<svg width="1000" height="1000" key="1">
 			{//Add positions to Nodes, but don't render them yet
 				Object.keys(this.props.graph.getNodes()).map((dat) => {
 					var x = Math.floor((Math.random() * 1000) + 1);
-					var y = Math.floor((Math.random() * 800) + 1);
+					var y = Math.floor((Math.random() * 1000) + 1);
 					this.props.graph.getNodes()[dat].setFeature("pos", {x,y});
 					//return <UINode key={dat} node={this.props.graph.getNodes()[dat]}/>;
 				})
@@ -64,6 +88,9 @@ class UIGraph extends React.Component {
 				})
 			}
 				</svg>
+            </ReactSVGPanZoom>
+            </div>
+		);
 	}
 }
 
