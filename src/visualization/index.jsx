@@ -27,8 +27,14 @@ class UIEdge extends React.Component {
 					 " L " + this.props.pos.x2 + " " + this.props.pos.y2}
 					 stroke="blue"
 					 strokeWidth="1"
-					 fill="none" />
+					 fill="none"
+					 opacity={0.2}
+				/>
 	}
+}
+
+class UIView extends React.Component{
+
 }
 
 class UIGraph extends React.Component {
@@ -38,32 +44,38 @@ class UIGraph extends React.Component {
         this.Viewer = null;
     }
     componentDidMount() {
+		window.addEventListener("resize", this.updateDimensions);
         this.Viewer.fitToViewer();
     }
+	updateDimensions() {
+		//this.setState({width: $(window).width(), height: $(window).height()});
+	}
 	render()
 	{
 		return(
 			<div>{/*
 				<button onClick={event => this.Viewer.zoomOnViewerCenter(1.1)}>Zoom in</button>
 				<button onClick={event => this.Viewer.fitSelection(500, 500, 500, 500)}>Zoom area</button>
-				<button onClick={event => this.Viewer.fitToViewer()}>Fit</button>*/}
-
-				<hr/>
+				<button onClick={event => this.Viewer.fitToViewer()}>Fit</button>
+			 	{ref={Viewer => this.Viewer = Viewer}}
+				*/}
 
 				<ReactSVGPanZoom
-					style={{outline: "1px solid black"}}
-					width={1000} height={1000} ref={Viewer => this.Viewer = Viewer}
+
+					width={window.innerWidth -20} height={window.innerHeight-20} ref={Viewer => this.Viewer = Viewer}
+					toolbarPosition={"none"}
+					tool={"auto"}
 					onClick={event => console.log('click', event.x, event.y, event.originalEvent)}
 					onMouseUp={event => console.log('up', event.x, event.y)}
 					onMouseMove={event => console.log('move', event.x, event.y)}
 					onMouseDown={event => console.log('down', event.x, event.y)}>
 
 
-			<svg width="1000" height="1000" key="1">
+			<svg width={window.innerWidth-20} height={window.innerHeight-20} key="1">
 			{//Add positions to Nodes, but don't render them yet
 				Object.keys(this.props.graph.getNodes()).map((dat) => {
-					var x = Math.floor((Math.random() * 1000) + 1);
-					var y = Math.floor((Math.random() * 1000) + 1);
+					var x = Math.floor((Math.random() * window.innerWidth-20) + 1);
+					var y = Math.floor((Math.random() * window.innerHeight-20) + 1);
 					this.props.graph.getNodes()[dat].setFeature("pos", {x,y});
 					//return <UINode key={dat} node={this.props.graph.getNodes()[dat]}/>;
 				})
