@@ -10700,6 +10700,11 @@
 			var _this4 = _possibleConstructorReturn(this, (UIGraph.__proto__ || Object.getPrototypeOf(UIGraph)).call(this, props, context));
 	
 			_this4.Viewer = null;
+			_this4.state = {
+				width: window.innerWidth - 20,
+				height: window.innerHeight - 20
+			};
+			_this4.updateDimensions = _this4.updateDimensions.bind(_this4);
 			return _this4;
 		}
 	
@@ -10712,7 +10717,10 @@
 		}, {
 			key: 'updateDimensions',
 			value: function updateDimensions() {
-				//this.setState({width: $(window).width(), height: $(window).height()});
+				this.setState({
+					width: window.innerWidth - 20,
+					height: window.innerHeight - 20
+				});
 			}
 		}, {
 			key: 'render',
@@ -10726,7 +10734,7 @@
 						_reactSvgPanZoom.ReactSVGPanZoom,
 						{
 	
-							width: window.innerWidth - 20, height: window.innerHeight - 20, ref: function ref(Viewer) {
+							width: this.state.width, height: this.state.height, ref: function ref(Viewer) {
 								return _this5.Viewer = Viewer;
 							},
 							toolbarPosition: "none",
@@ -10745,7 +10753,7 @@
 							} },
 						_react2.default.createElement(
 							'svg',
-							{ width: window.innerWidth - 20, height: window.innerHeight - 20, key: '1' },
+							{ width: this.state.width, height: this.state.height, key: '1' },
 							//Add positions to Nodes, but don't render them yet
 							Object.keys(this.props.graph.getNodes()).map(function (dat) {
 								var x = Math.floor(Math.random() * window.innerWidth - 20 + 1);

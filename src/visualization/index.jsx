@@ -42,27 +42,30 @@ class UIGraph extends React.Component {
     constructor(props, context) {
         super(props, context);
         this.Viewer = null;
+		this.state = {
+			width:  window.innerWidth -20,
+			height: window.innerHeight -20
+		}
+		this.updateDimensions = this.updateDimensions.bind(this);
     }
     componentDidMount() {
 		window.addEventListener("resize", this.updateDimensions);
         this.Viewer.fitToViewer();
     }
 	updateDimensions() {
-		//this.setState({width: $(window).width(), height: $(window).height()});
+		this.setState({
+			width:  window.innerWidth -20,
+			height: window.innerHeight -20
+		});
 	}
 	render()
 	{
 		return(
-			<div>{/*
-				<button onClick={event => this.Viewer.zoomOnViewerCenter(1.1)}>Zoom in</button>
-				<button onClick={event => this.Viewer.fitSelection(500, 500, 500, 500)}>Zoom area</button>
-				<button onClick={event => this.Viewer.fitToViewer()}>Fit</button>
-			 	{ref={Viewer => this.Viewer = Viewer}}
-				*/}
+			<div>
 
 				<ReactSVGPanZoom
 
-					width={window.innerWidth -20} height={window.innerHeight-20} ref={Viewer => this.Viewer = Viewer}
+					width={this.state.width} height={this.state.height} ref={Viewer => this.Viewer = Viewer}
 					toolbarPosition={"none"}
 					tool={"auto"}
 					onClick={event => console.log('click', event.x, event.y, event.originalEvent)}
@@ -71,7 +74,7 @@ class UIGraph extends React.Component {
 					onMouseDown={event => console.log('down', event.x, event.y)}>
 
 
-			<svg width={window.innerWidth-20} height={window.innerHeight-20} key="1">
+			<svg width={this.state.width} height={this.state.height} key="1">
 			{//Add positions to Nodes, but don't render them yet
 				Object.keys(this.props.graph.getNodes()).map((dat) => {
 					var x = Math.floor((Math.random() * window.innerWidth-20) + 1);

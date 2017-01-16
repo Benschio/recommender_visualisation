@@ -43,9 +43,17 @@
     "webpack-stream": "^3.2.0"
   },
   "dependencies": {
+    "babel-register": "^6.18.0",
+    "chai": "^3.5.0",
     "graphinius": "^0.4.2",
+    "gulp-babel": "^6.1.2",
+    "gulp-istanbul": "^1.1.1",
+    "istanbul": "^0.4.5",
+    "mocha": "^3.2.0",
     "react": "^15.2.1",
     "react-dom": "^15.2.1",
-    "react-svg-pan-zoom": "^2.4.1"
+    "react-svg-pan-zoom": "^2.4.1",
+    "sinon": "^1.17.7",
+    "sinon-chai": "^2.8.0"
   }
 }
