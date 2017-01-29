@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from 'react-dom';
-import {ReactSVGPanZoom} from 'react-svg-pan-zoom';
+import a from 'react-svg-pan-zoom';
 
 
 class UINode extends React.Component {
@@ -41,17 +41,49 @@ class UIGraph extends React.Component {
 
     constructor(props, context) {
         super(props, context);
-        this.Viewer = null;
+        this.currentZoom = 1;
 		this.state = {
 			width:  window.innerWidth -20,
-			height: window.innerHeight -20
-		}
-		this.updateDimensions = this.updateDimensions.bind(this);
+			height: window.innerHeight -20,
+			tX: 0,
+			tY: 0,
+			zoom: this.currentZoom
+		};
+        this.updateDimensions = this.updateDimensions.bind(this);
+        this.handleScroll = this.handleScroll.bind(this);
+        this.handleDrag = this.handleDrag.bind(this);
+        this.handleDragStart = this.handleDragStart.bind(this);
+        this.handleDragEnd = this.handleDragEnd.bind(this);
     }
     componentDidMount() {
 		window.addEventListener("resize", this.updateDimensions);
-        this.Viewer.fitToViewer();
     }
+    handleDrag(e){
+    	if(this.dragActive){
+            this.setState({
+                tX: (this.startX - e.clientX)*-1,
+                tY: (this.startY - e.clientY)*-1
+            });
+            console.log("scale("+this.state.zoom+") "+
+            "translate("+this.state.tX+","+this.state.tY+")");
+		}
+
+    }
+    handleDragStart(e){
+    	this.dragActive = true;
+    	this.startX = e.clientX;
+    	this.startY = e.clientY;
+    	console.log(this.startX + " " + this.startY);
+    }
+    handleDragEnd(e){
+        this.dragActive = false;
+    }
+    handleScroll(e){
+		this.currentZoom -= e.deltaY/1000;
+        this.setState({
+            zoom: this.currentZoom
+        });
+	}
 	updateDimensions() {
 		this.setState({
 			width:  window.innerWidth -20,
@@ -61,20 +93,9 @@ class UIGraph extends React.Component {
 	render()
 	{
 		return(
-			<div>
-
-				<ReactSVGPanZoom
-
-					width={this.state.width} height={this.state.height} ref={Viewer => this.Viewer = Viewer}
-					toolbarPosition={"none"}
-					tool={"auto"}
-					onClick={event => console.log('click', event.x, event.y, event.originalEvent)}
-					onMouseUp={event => console.log('up', event.x, event.y)}
-					onMouseMove={event => console.log('move', event.x, event.y)}
-					onMouseDown={event => console.log('down', event.x, event.y)}>
-
-
-			<svg width={this.state.width} height={this.state.height} key="1">
+			<div onWheel={this.handleScroll} onMouseDown={this.handleDragStart} onMouseUp={this.handleDragEnd} onMouseMove={this.handleDrag}>
+			<svg width={this.state.width} height={this.state.height} key="1" style={{transform: "scale("+this.state.zoom+") "+
+																					 "translate("+this.state.tX+"px,"+this.state.tY+"px)"}}>
 			{//Add positions to Nodes, but don't render them yet
 				Object.keys(this.props.graph.getNodes()).map((dat) => {
 					var x = Math.floor((Math.random() * window.innerWidth-20) + 1);
@@ -103,7 +124,7 @@ class UIGraph extends React.Component {
 				})
 			}
 				</svg>
-            </ReactSVGPanZoom>
+
             </div>
 		);
 	}
